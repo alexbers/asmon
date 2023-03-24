@@ -47,8 +47,8 @@ def postcheck_hook():
 
 
 async def send_msg(user_id, text):
+    log("send_msg", user_id, text)
     if DEBUG:
-        log("send_msg emulate only", user_id, text)
         return True
 
 
