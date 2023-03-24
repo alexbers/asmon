@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from config import BOT_TOKEN, TG_DEST_ID, ALERT_PAUSE
 
-from asmon_core import prefix_ctx, alerts_repeat_after_ctx, prefix_to_checks_cnt
+from asmon_core import prefix_ctx, file_name_ctx, alerts_repeat_after_ctx, prefix_to_checks_cnt
 import asmon_metrics
 
 DEBUG = False
@@ -71,6 +71,11 @@ async def send_msg(user_id, text):
 
 
 def alert(text, alert_id="default", repeat_after=None):
+    if not file_name_ctx.get():
+        # if script runs directly, do nothing
+        log(text)
+        return
+
     alert_id = str(alert_id)
     fired_alerts_ctx.get().add(alert_id)
 
