@@ -1,0 +1,9 @@
+version: '2.0'
+services:
+  asmon:
+    build: .
+    network_mode: "host"
+    volumes:
+      - ./:/home/asmon/
+    restart: on-failure
+    mem_limit: 2048m
