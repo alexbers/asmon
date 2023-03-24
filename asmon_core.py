@@ -47,10 +47,13 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
             e_name = type(e).__name__
             filename, funcname, parameter = alert_prefix
 
-            msg = f"проверка упала с ошибкой {e_name}, файл {filename}, функция {funcname}"
+            msg = f"проверка упала с ошибкой {e_name}:{filename}, функция {funcname}"
+            if isinstance(e, TimeoutError):
+                msg = f"таймаут {filename}:{funcname}"
+
 
             if parameter is not None:
-                msg += f", параметр {parameter}"
+                msg += f"({parameter})"
 
             alert(msg, "__exception__")
 
@@ -83,6 +86,10 @@ def reg_checker(checker, subj=None, pause=CHECK_PAUSE,
 
 def checker(f=None, *, args=[], pause=CHECK_PAUSE,
             alerts_repeat_after=float("inf"), timeout=float("inf")):
+    if not file_name_ctx.get():
+        # if script runs directly, do nothing
+        return f if f else lambda f: f
+
     kwargs = {
         "pause": pause,
         "alerts_repeat_after": alerts_repeat_after,
