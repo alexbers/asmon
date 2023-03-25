@@ -9,6 +9,18 @@ import aiohttp
 
 from asmon import alert
 
+
+async def check_tcp_port(host, port):
+    writer = None
+    try:
+        reader, writer = await asyncio.open_connection(host, port)
+    except OSError as E:
+        alert(f"недоступен порт {port} на узле {host}: {E}")
+    finally:
+        if writer:
+            writer.close()
+
+
 async def check_cert_expire(host, days=7, timeout=10):
     expire_time = 0
     class MyConnector(aiohttp.TCPConnector):
