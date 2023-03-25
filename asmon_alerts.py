@@ -26,6 +26,7 @@ class Alert:
     alert_id: str
     text: str
     start_time: float
+    last_update_time: float
     last_send_time: float
     repeat_after: float
     recovered: bool
@@ -43,6 +44,7 @@ def postcheck_hook():
     active = [a for a in prefix_to_id_to_alert[prefix_ctx.get()].values()]
     for alert in active:
         if alert.alert_id not in fired_alerts_ctx.get():
+            alert.last_update_time = time.time()
             alert.recovered = True
 
 
@@ -50,7 +52,6 @@ async def send_msg(user_id, text):
     log("send_msg", user_id, text)
     if DEBUG:
         return True
-
 
     url = "https://api.telegram.org/bot%s/sendMessage" % BOT_TOKEN
     payload = {"chat_id": user_id, "text": text,}
@@ -91,10 +92,11 @@ def alert(text, alert_id="default", repeat_after=None):
 
     if alert_id not in id_to_alert:
         id_to_alert[alert_id] = Alert(prefix, alert_id, text, start_time=time.time(),
-                                      last_send_time=0, repeat_after=repeat_after,
-                                      recovered=False)
+                                      last_update_time=time.time(), last_send_time=0,
+                                      repeat_after=repeat_after, recovered=False)
     else:
         id_to_alert[alert_id].text = text
+        id_to_alert[alert_id].last_update_time = time.time()
         id_to_alert[alert_id].repeat_after = repeat_after
         id_to_alert[alert_id].recovered = False
 
@@ -136,6 +138,10 @@ async def send_new_alerts():
         for a in alerts:
             if not prefix_to_checks_cnt[a.prefix]:
                 # there was no checks after reloading
+                continue
+
+            if a.last_update_time < a.last_send_time:
+                # the alert is not updated since the last report
                 continue
 
             if (a.recovered or a.last_send_time == 0 or
