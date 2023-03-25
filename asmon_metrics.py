@@ -66,6 +66,7 @@ async def handle_metrics(reader, writer):
         metrics = []
         metrics.append(["uptime", "counter", "asmon uptime", time.time() - START_TIME])
         metrics.append(["tg_fails", "counter", "tg send fails", tg_fails])
+        metrics.append(["tasks", "counter", "number of tasks", len(asyncio.all_tasks())])
 
         for prefix, count in prefix_to_checks_cnt.items():
             metrics.append(["checks", "counter", "checks counter",

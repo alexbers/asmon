@@ -14,7 +14,7 @@ The asyncronous platform to check your services and send Telegram alerts if some
 
 1. Small code amount, which makes it easy to patch it for your needs
 2. Customizability, all checks are developed using Python, which gives unlimited posibilities
-3. Speed, all checks are asyncronous
+3. Speed
 
 ## Idea ##
 
