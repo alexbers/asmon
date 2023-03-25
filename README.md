@@ -1,6 +1,6 @@
 # Async Monitoring #
 
-The asyncronous platform to run custom checks on your servers
+The asyncronous platform to check your services and send Telegram alerts if something goes wrong.
 
 ## Starting Up ##
     
