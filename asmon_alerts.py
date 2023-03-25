@@ -1,4 +1,3 @@
-import aiohttp
 import asyncio
 import contextvars
 import time
@@ -6,6 +5,8 @@ import traceback
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
+
+import httpx
 
 from config import BOT_TOKEN, TG_DEST_ID, ALERT_PAUSE
 
@@ -57,14 +58,14 @@ async def send_msg(user_id, text):
     payload = {"chat_id": user_id, "text": text,}
 
     try:
-        async with aiohttp.request("POST", url, json=payload) as resp:
-            if resp.status != 200:
-                print(3)
+        async with httpx.AsyncClient() as client:
+            resp = httpx.post(url, json=payload)
+            print(dir(resp))
+            if resp.status_code != 200:
                 asmon_metrics.tg_fails += 1
-                resp_text = await resp.text()
                 log(f"Failed to send msg to {user_id}: {text} " +
-                    f"{resp.status} {resp.reason} {resp_text}")
-            return resp.status == 200
+                    f"{resp.status_code} {resp.text}")
+            return resp.status_code == 200
     except OSError:
         traceback.print_exc()
         asmon_metrics.exceptions_cnt["alert_sender"] += 1

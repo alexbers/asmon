@@ -5,7 +5,8 @@
 # See more examples in asmon_checkers.py
 
 import asyncio
-import aiohttp
+
+import httpx
 
 from asmon import checker, alert
 import asmon_checkers
@@ -40,13 +41,12 @@ async def check_certs(host):
 @checker(pause=5, alerts_repeat_after=60*60*48, timeout=60)
 async def check_wikipedia():
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get("https://wikipedia.org/") as resp:
-                if resp.status != 200:
-                    alert(f"википедия вернула плохой статус ответа {resp.status}")
+        async with httpx.AsyncClient() as client:
+            resp = await client.get("https://wikipedia.org/", follow_redirects=True)
+            if resp.status_code != 200:
+                alert(f"википедия вернула плохой статус ответа {resp.status_code}")
 
-                resp_text = await resp.text()
-                if "wikipedia" not in resp_text:
-                    alert(f"википедия вернула плохую страничку")
+            if "wikipedia" not in resp.text:
+                alert(f"википедия вернула плохую страничку")
     except OSError as E:
         alert(f"википедия недоступна {E}")
