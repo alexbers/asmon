@@ -25,6 +25,25 @@ from asmon_metrics import start_metrics_srv, exceptions_cnt, prefix_to_str
 
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
+next_allowed_run = 0
+
+async def throttle_check_runs():
+    global next_allowed_run
+
+    PPS = 25
+    NEXT_TIME = 1 / PPS
+
+    cur_time = time.time()
+
+    wait_time = next_allowed_run - cur_time
+    if wait_time < 0:
+        next_allowed_run = cur_time + NEXT_TIME
+        return
+
+    next_allowed_run += NEXT_TIME
+    await asyncio.sleep(wait_time)
+
+
 
 async def run_checkloop(check_func, args, pause, alert_prefix=(),
                         alerts_repeat_after=float("inf"), timeout=float("inf")):
@@ -35,6 +54,8 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
         pause_min, pause_max = pause
     except TypeError:
         pause_min, pause_max = pause, pause
+
+    await throttle_check_runs()
 
     while True:
         try:
@@ -57,7 +78,7 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
 
             alert(msg, "__exception__")
 
-            exceptions_cnt[alert_prefix] += 1
+            exceptions_cnt[prefix_to_str(alert_prefix)] += 1
         finally:
             prefix_to_checks_cnt[alert_prefix] += 1
 
