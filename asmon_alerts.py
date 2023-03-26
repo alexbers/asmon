@@ -60,7 +60,6 @@ async def send_msg(user_id, text):
     try:
         async with httpx.AsyncClient() as client:
             resp = httpx.post(url, json=payload)
-            print(dir(resp))
             if resp.status_code != 200:
                 asmon_metrics.tg_fails += 1
                 log(f"Failed to send msg to {user_id}: {text} " +

@@ -20,7 +20,7 @@ async def just_check():
     print("You can modify me and system will reload me automatically")
 
     # comment and uncomment the next line to test the dynamic reloading
-    alert("test")
+    alert("this is test alert, please edit check_example.py")
 
 
 # an example of basic checker, checks if TCP port is open every 5 seconds

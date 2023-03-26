@@ -4,6 +4,8 @@ The asyncronous platform to check your services and send Telegram alerts if some
 
 The services are checked by periodicaly running your checkers written on Python.
 
+![Demo](https://alexbers.com/asmon.png)
+
 ## Starting Up ##
     
 1. `git clone https://github.com/alexbers/asmon.git; cd asmon`
@@ -44,7 +46,7 @@ The platfom has a simple API, that requires knowledge of only two things:
 
 Example of *check_something.py*:
 
-```
+```python
 from asmon import checker, alert
 
 @checker(args=["ya.ru", "google.com"], pause=5, timeout=20)
