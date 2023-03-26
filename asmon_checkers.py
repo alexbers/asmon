@@ -5,53 +5,46 @@
 import asyncio
 import time
 
-import httpx
-
 from asmon import alert
 
-
-client = None
 
 async def check_tcp_port(host, port, timeout=30):
     writer = None
     try:
         reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
     except (OSError, TimeoutError, asyncio.exceptions.TimeoutError) as E:
-        alert(f"недоступен порт {port} на узле {host}: {E}")
+        err = str(E)
+        if not err:
+            err = type(E).__name__
+        alert(f"недоступен порт {port} на узле {host}: {err}")
     finally:
         if writer:
             writer.close()
 
 
-async def check_cert_expire(host, days=7, timeout=30):
-    global client
+async def check_cert_expire(host, port=443, days=7, timeout=30):
+    writer = None
     try:
-        if client is None:
-            timeout = httpx.Timeout(timeout, pool=timeout*10)
-            client = httpx.AsyncClient(timeout=timeout)
-
-        r = await client.head(f"https://{host}/", follow_redirects=False)
-
-        network_stream = r.extensions["network_stream"]
-        ssl_object = network_stream.get_extra_info("ssl_object")
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port, ssl=True, server_hostname=host, limit=4096), timeout=timeout)
+        ssl_object = writer.get_extra_info("ssl_object")
         cert = ssl_object.getpeercert()
 
         TIME_FMT = "%b %d %H:%M:%S %Y %Z"
         expire_time = time.mktime(time.strptime(cert["notAfter"], TIME_FMT))
 
         time_left = int(expire_time - time.time())
-        if time_left < 0:
-            alert(f"сертификат {host} закончился {-time_left//60//60//24} дн. назад", 1)
-        elif time_left < 60*60*24*days:
+        if time_left < 60*60*24*days:
             alert(f"сертификат {host} закончится через {time_left//60//60//24} дн.", 1)
 
-    except asyncio.TimeoutError as E:
-        alert(f"не получилось подключиться по https к {host}: таймаут", 2)
-    except Exception as E:
+    except (OSError, TimeoutError, asyncio.exceptions.TimeoutError) as E:
         err = str(E)
         if not err:
             err = type(E).__name__
-        alert(f"не получилось подключиться по https к {host}: {err}", 2)
+        alert(f"недоступен порт {port} на узле {host}: {err}")
+    finally:
+        if writer:
+            writer.close()
 
 
 if __name__ == "__main__":

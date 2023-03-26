@@ -43,6 +43,8 @@ def make_metrics_pkt(metrics):
             pkt_body_list.append(f"{name} {val}")
     pkt_body = "\n".join(pkt_body_list) + "\n"
 
+    # pkt_body = "\n".join(map(str,asyncio.all_tasks())) + pkt_body
+
     pkt_header_list = []
     pkt_header_list.append("HTTP/1.1 200 OK")
     pkt_header_list.append("Connection: close")
@@ -57,6 +59,8 @@ def make_metrics_pkt(metrics):
 
 
 async def handle_metrics(reader, writer):
+    request = await reader.read(1024)
+
     client_ip = writer.get_extra_info("peername")[0]
     if IP_WHITELIST and client_ip not in IP_WHITELIST:
         writer.close()
@@ -67,6 +71,7 @@ async def handle_metrics(reader, writer):
         metrics.append(["uptime", "counter", "asmon uptime", time.time() - START_TIME])
         metrics.append(["tg_fails", "counter", "tg send fails", tg_fails])
         metrics.append(["tasks", "counter", "number of tasks", len(asyncio.all_tasks())])
+        metrics.append(['checks_total', "counter", "number of checks", sum(prefix_to_checks_cnt.values())])
 
         for prefix, count in prefix_to_checks_cnt.items():
             metrics.append(["checks", "counter", "checks counter",
@@ -81,6 +86,7 @@ async def handle_metrics(reader, writer):
                            {"filename": func_name, "val": len(tasks)}])
 
         pkt = make_metrics_pkt(metrics)
+
         writer.write(pkt.encode())
         await writer.drain()
 
