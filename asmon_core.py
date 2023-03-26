@@ -25,28 +25,30 @@ from asmon_metrics import start_metrics_srv, exceptions_cnt, prefix_to_str
 
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
-next_allowed_run = 0
+next_allowed_run = defaultdict(int)
 
-async def throttle_check_runs():
+async def throttle_runs(key, pps):
     global next_allowed_run
 
-    PPS = 25
-    NEXT_TIME = 1 / PPS
+    if pps == 0:
+        return
+    next_time = 1.0 / pps
 
     cur_time = time.time()
 
-    wait_time = next_allowed_run - cur_time
+    wait_time = next_allowed_run[key] - cur_time
     if wait_time < 0:
-        next_allowed_run = cur_time + NEXT_TIME
+        next_allowed_run[key] = cur_time + next_time
         return
 
-    next_allowed_run += NEXT_TIME
+    next_allowed_run[key] += next_time
     await asyncio.sleep(wait_time)
 
 
 
 async def run_checkloop(check_func, args, pause, alert_prefix=(),
-                        alerts_repeat_after=float("inf"), timeout=float("inf")):
+                        alerts_repeat_after=float("inf"), max_starts_per_sec=0,
+                        timeout=float("inf")):
     prefix_ctx.set(alert_prefix)
     alerts_repeat_after_ctx.set(alerts_repeat_after)
 
@@ -55,10 +57,14 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
     except TypeError:
         pause_min, pause_max = pause, pause
 
-    await throttle_check_runs()
+    await throttle_runs("start_check", 25)
+
+    throttler_key = tuple(alert_prefix[:2])  # file and func
 
     while True:
         try:
+            await throttle_runs(throttler_key, max_starts_per_sec)
+
             precheck_hook(args_str=str(args))
             await asyncio.wait_for(check_func(*args), timeout=timeout)
             postcheck_hook()
@@ -87,7 +93,8 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
 
 
 def reg_checker(checker, subj=None, pause=CHECK_PAUSE,
-                alerts_repeat_after=float("inf"), timeout=float("inf")):
+                alerts_repeat_after=float("inf"), max_starts_per_sec=0,
+                timeout=float("inf")):
     if subj is None:
         args = []
     else:
@@ -98,7 +105,8 @@ def reg_checker(checker, subj=None, pause=CHECK_PAUSE,
     alert_prefix = (filename, checker.__name__, subj)
 
     checkloop = run_checkloop(checker, args, pause, alert_prefix=alert_prefix,
-                              alerts_repeat_after=alerts_repeat_after, timeout=timeout)
+                              alerts_repeat_after=alerts_repeat_after,
+                              max_starts_per_sec=max_starts_per_sec,timeout=timeout)
 
     task = asyncio.create_task(checkloop)
 
@@ -106,7 +114,8 @@ def reg_checker(checker, subj=None, pause=CHECK_PAUSE,
 
 
 def checker(f=None, *, args=[], pause=CHECK_PAUSE,
-            alerts_repeat_after=float("inf"), timeout=float("inf")):
+            alerts_repeat_after=float("inf"), max_starts_per_sec=0,
+            timeout=float("inf")):
     if not file_name_ctx.get():
         # if script runs directly, do nothing
         return f if f else lambda f: f
@@ -114,6 +123,7 @@ def checker(f=None, *, args=[], pause=CHECK_PAUSE,
     kwargs = {
         "pause": pause,
         "alerts_repeat_after": alerts_repeat_after,
+        "max_starts_per_sec": max_starts_per_sec,
         "timeout": timeout
     }
 

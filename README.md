@@ -2,6 +2,8 @@
 
 The asyncronous platform to check your services and send Telegram alerts if something goes wrong.
 
+The services are checked by periodicaly running your checkers written on Python.
+
 ## Starting Up ##
     
 1. `git clone https://github.com/alexbers/asmon.git; cd asmon`
@@ -12,19 +14,32 @@ The asyncronous platform to check your services and send Telegram alerts if some
 
 ## Goals ##
 
-1. Small code amount, which makes it easy to patch it for your needs
-2. Customizability, all checks are developed using Python, which gives unlimited posibilities
-3. Speed
+1. Customizability, unlimited checking and alerting posibilities
+2. Speed
+3. Small amount of code
 
-## Idea ##
 
-This is a monitoring platform which periodicaly runs your checkers on Python
-and sends Telegram messages if something goes wrong.
+## Performance ##
 
-It has simple API, you need only two things:
+In other platforms, running custom checks involves calling an external program, which can be
+expensive in terms of CPU and RAM.
 
-1. `checker` decorator to specify how often to run your function
-2. `alert` function to signalize if something is wrong
+Asmon allows developers to create checkers in Python using asyncronous functions. Each check task
+consumes approximately 10KB of memory, so you can have 100 000 simultanious tasks per
+gigabyte of RAM.
+
+The check speed depends on the complexity of the check. For example, when checking SSL certificate
+expiration, you can expect a speed of about 1 000 checks per second on a modern CPU.
+
+I tested Asmon on the cheapest VM available in Digital Ocean hosting.
+
+
+## How to Develop Checkers  ##
+
+The platfom has a simple API, that requires knowledge of only two things:
+
+1. The `checker` decorator, which is used to specify how often to run your function
+2. The `alert` function, which is used to signal if something is wrong
 
 
 Example of *check_something.py*:
@@ -32,7 +47,7 @@ Example of *check_something.py*:
 ```
 from asmon import checker, alert
 
-@checker(args=["ya.ru", "google.com"], pause=5, alerts_repeat_after=300, timeout=20)
+@checker(args=["ya.ru", "google.com"], pause=5, timeout=20)
 async def test_port80(host):
     writer = None
     try:
@@ -43,19 +58,27 @@ async def test_port80(host):
         writer.close()
 ```
 
-The platform can send messages about recoveries and remind you about unrecovered alerts with some interval.
+The arguments of `checker` decorator (all optional):
 
-Scripts should begin with "check_". If you modify some script, the platform will do its magic and
-you don't have to restart anything.
+- args: create multiple tasks, one per argument
+- pause: pause after check in seconds until the next check
+- max_starts_per_sec: if specified, limits the number of function calls per second. Useful if you have many tasks
+- alerts_repeat_after: if alert remain active for a specified time, send a reminder message
+- timeout: timeout of check function
+
+The platform can send messages about recoveries and remind you about unrecovered alerts at intervals.
+
+Scripts should begin with "check_". If you modify a script, the platform will do its magic and
+automaticaly reload it.
 
 The platform exports its metrics in Prometheus format, so you can monitor the monitoring.
 
-See more examples in `check_example.py`
+For more examples, see `check_example.py`
 
 
 ### Advanced usage ###
 
-If you want to distinguish between different error conditions and have different alert for them, use the second parameter of alert function - the alert\_id.
+If you want to distinguish between different error conditions and have different alerts for them, use the second parameter of alert function - the alert\_id.
 
 Example:
 
@@ -66,4 +89,4 @@ async def f():
    alert("BBBB", 2)
 ```
 
-You will get two alerts: "AAAA" and "BBBB". If you comment them out, you will get two recovery messages.
+This will produce two alerts: "AAAA" and "BBBB". If you comment them out, you will receive two recovery messages.
