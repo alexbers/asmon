@@ -12,11 +12,11 @@ from asmon import alert
 
 client = None
 
-async def check_tcp_port(host, port):
+async def check_tcp_port(host, port, timeout=30):
     writer = None
     try:
-        reader, writer = await asyncio.open_connection(host, port)
-    except OSError as E:
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
+    except (OSError, TimeoutError, asyncio.exceptions.TimeoutError) as E:
         alert(f"недоступен порт {port} на узле {host}: {E}")
     finally:
         if writer:
