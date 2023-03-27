@@ -42,31 +42,53 @@ The platfom has a simple API, that requires knowledge of only two things:
 2. The `alert` function, which is used to signal if something is wrong
 
 
-Example of *check_something.py*:
+Example of *check_my_service.py*:
+
+```python
+import httpx
+import json
+
+from asmon import checker, alert
+
+@checker
+async def check_rest_api():
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get("https://reqres.in/api/users", timeout=10)
+            if resp.status_code != 200:
+                alert(f"test rest-service returned bad status code {resp.status_code}")
+                return
+            if "data" not in resp.json():
+                alert(f"test rest-service returned json without 'data' field")
+    except httpx.RequestError as E:
+        alert(f"test rest-service is down: {E}")
+    except json.decoder.JSONDecodeError:
+        alert("test rest-service returned bad JSON")
+```
+
+The `checker` decorator can have arguments:
+
+- args: create multiple tasks, one per argument. Default: one task without arguments is created
+- pause: pause after check in seconds until the next check. Default: see config.py
+- max_starts_per_sec: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
+- alerts_repeat_after: if alert remain active for a specified time, send a reminder message. Default: reminders are not sent
+- timeout: timeout of check function. Default: no timeout
+
+Another example, *check_certs.py*, showing `checker` decorator usage with arguments and a built-in
+check for TLS certificate expiration:
 
 ```python
 from asmon import checker, alert
+import asmon_checkers
 
-@checker(args=["ya.ru", "google.com"], pause=5, timeout=20)
-async def test_port80(host):
-    writer = None
-    try:
-        reader, writer = await asyncio.open_connection(host, 80)
-    except OSError as E:
-        alert(f"unreachable port 80 on {host}: {E}")
-    finally:
-        writer.close()
+SITES_TO_CHECK = ["google.com", "microsoft.com", "reqres.in"]
+
+@checker(args=SITES_TO_CHECK, pause=60, timeout=10, alerts_repeat_after=30)
+async def check_certs(host):
+    await asmon_checkers.check_cert_expire(host, days=100)
 ```
 
-The arguments of `checker` decorator (all optional):
-
-- args: create multiple tasks, one per argument
-- pause: pause after check in seconds until the next check
-- max_starts_per_sec: if specified, limits the number of function calls per second. Useful if you have many tasks
-- alerts_repeat_after: if alert remain active for a specified time, send a reminder message
-- timeout: timeout of check function
-
-The platform can send messages about recoveries and remind you about unrecovered alerts at intervals.
+The platform sends messages about recoveries and reminds you about unrecovered alerts at intervals.
 
 Scripts should begin with "check_". If you modify a script, the platform will do its magic and
 automaticaly reload it.
@@ -82,7 +104,7 @@ If you want to distinguish between different error conditions and have different
 
 Example:
 
-```
+```python
 @checker
 async def f():
    alert("AAAA", 1)
@@ -90,3 +112,17 @@ async def f():
 ```
 
 This will produce two alerts: "AAAA" and "BBBB". If you comment them out, you will receive two recovery messages.
+
+If you want to skip the rest checks, for example, if the site is down, use
+
+```python
+@checker
+async def f():
+    if ...:
+        alert("site is down, skip checks")
+        raise Exception()
+    alert("bad page 1", 1)
+    alert("bad page 2", 2)
+```
+
+In this case, if there will be "something bad" alert, you will not get spam messages about recoveries of other two alerts.

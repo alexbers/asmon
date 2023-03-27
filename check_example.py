@@ -39,19 +39,18 @@ async def check_certs(host):
 
 # more complex checks, shows how easy you can write custom checks
 # alert_repeat_after is a reminder period for alerts
-@checker(pause=5, alerts_repeat_after=60*60*48, timeout=60)
+@checker(pause=60, alerts_repeat_after=60*60*48, timeout=30)
 async def check_rest_api():
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get("https://reqres.in/api/users")
+            resp = await client.get("https://reqres.in/api/users", timeout=10)
             if resp.status_code != 200:
                 alert(f"тестовый rest-сервис вернул плохой статус ответа {resp.status_code}")
                 return
             if "data" not in resp.json():
                 alert(f"тестовый rest-сервис вернул json без поля 'data'")
-
     except httpx.RequestError as E:
-        alert(f"сайт с погодой недоступен {E}")
+        alert(f"тестовый rest-сервис недоступен {E}")
     except json.decoder.JSONDecodeError:
         alert("тестовый rest-сервис вернул плохой json")
 
