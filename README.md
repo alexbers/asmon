@@ -1,4 +1,4 @@
-# Asmon - Asyncronous Monitoring Platform #
+# Asmon — Asyncronous Monitoring Platform #
 
 Asmon is a Python platform to monitor your services and send Telegram alerts if something goes wrong.
 
@@ -33,7 +33,7 @@ on Digital Ocean hosting.
 
 ## How to Develop Checkers  ##
 
-The platfom has a simple API, that requires knowledge of only two things:
+The platfom has a simple API, that requires knowledge of two things:
 
 1. The `checker` decorator to mark your function to be periodicaly launched
 2. The `alert` function to signal if something is wrong
@@ -43,9 +43,7 @@ Example of *check_my_service.py*:
 
 ```python
 import json
-
 import httpx
-
 from asmon import checker, alert
 
 @checker
@@ -54,14 +52,14 @@ async def check_rest_api():
         async with httpx.AsyncClient() as client:
             resp = await client.get("https://reqres.in/api/users", timeout=10)
             if resp.status_code != 200:
-                alert(f"test rest-service returned bad status code {resp.status_code}")
+                alert(f"rest service returned bad status code {resp.status_code}")
                 return
             if "data" not in resp.json():
-                alert(f"test rest-service returned json without 'data' field")
+                alert(f"rest service returned json without 'data' field")
     except httpx.RequestError as E:
-        alert(f"test rest-service is down: {E}")
+        alert(f"rest service is down: {E}")
     except json.decoder.JSONDecodeError:
-        alert("test rest-service returned bad JSON")
+        alert("rest service returned bad JSON")
 ```
 
 The `checker` decorator can have these arguments:
@@ -79,7 +77,7 @@ check for TLS certificate expiration:
 from asmon import checker, alert
 import asmon_checkers
 
-SITES_TO_CHECK = ["google.com", "microsoft.com", "reqres.in"]
+SITES_TO_CHECK = ["google.com", "microsoft.com"]
 
 @checker(args=SITES_TO_CHECK, pause=60, timeout=10, alerts_repeat_after=30)
 async def check_certs(host):
@@ -123,4 +121,4 @@ async def f():
     alert("bad page 2", 2)
 ```
 
-In this case, if there will be "something bad" alert, you will not get spam messages about recoveries of other two alerts.
+In this case, if there will be "site is down" alert, you will not get spam messages about recoveries of other two alerts, if they were fired before.
