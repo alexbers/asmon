@@ -38,15 +38,16 @@ I tested Asmon on the cheapest VM available in Digital Ocean hosting.
 
 The platfom has a simple API, that requires knowledge of only two things:
 
-1. The `checker` decorator, which is used to specify how often to run your function
-2. The `alert` function, which is used to signal if something is wrong
+1. The `checker` decorator to mark your function to be periodicaly launched
+2. The `alert` function to signal if something is wrong
 
 
 Example of *check_my_service.py*:
 
 ```python
-import httpx
 import json
+
+import httpx
 
 from asmon import checker, alert
 
@@ -66,12 +67,12 @@ async def check_rest_api():
         alert("test rest-service returned bad JSON")
 ```
 
-The `checker` decorator can have arguments:
+The `checker` decorator can have these arguments:
 
-- args: create multiple tasks, one per argument. Default: one task without arguments is created
+- args: create multiple tasks, one per argument. Default: single task without arguments is created
 - pause: pause after check in seconds until the next check. Default: see config.py
 - max_starts_per_sec: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
-- alerts_repeat_after: if alert remain active for a specified time, send a reminder message. Default: reminders are not sent
+- alerts_repeat_after: if alert remain active for a specified time, send a reminder message. Default: no reminders
 - timeout: timeout of check function. Default: no timeout
 
 Another example, *check_certs.py*, showing `checker` decorator usage with arguments and a built-in
