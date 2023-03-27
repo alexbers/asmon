@@ -62,16 +62,16 @@ async def check_rest_api():
         alert("rest service returned bad JSON")
 ```
 
-The `checker` decorator can have these arguments:
+The `checker` decorator also can have these arguments:
 
-- args: create multiple tasks, one per argument. Default: single task without arguments is created
-- pause: pause after check in seconds until the next check. Default: see config.py
-- max_starts_per_sec: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
-- alerts_repeat_after: if alert remain active for a specified time, send a reminder message. Default: no reminders
-- timeout: timeout of check function. Default: no timeout
+- **args**: create multiple tasks, one per argument. Default: single task without arguments is created
+- **pause**: pause after check in seconds until the next check. Default: see config.py
+- **max_starts_per_sec**: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
+- **alerts_repeat_after**: if alert remain active for a specified time, send a reminder message. Default: no reminders
+- **timeout**: timeout of check function. Default: no timeout
 
 Another example, *check_certs.py*, showing `checker` decorator usage with arguments and a built-in
-check for TLS certificate expiration:
+check for TLS-certificate expiration:
 
 ```python
 from asmon import checker, alert
@@ -86,7 +86,7 @@ async def check_certs(host):
 
 The platform sends messages about recoveries and reminds you about unrecovered alerts at intervals.
 
-Scripts should begin with "check_". If you modify a script, the platform will do its magic and
+Scripts should be named `check_*.py`. If you modify a script, the platform will do its magic and
 automaticaly reload it.
 
 The platform exports its metrics in Prometheus format, so you can monitor the monitoring.
@@ -96,7 +96,7 @@ For more examples, see `check_example.py`
 
 ### Advanced usage ###
 
-If you want to distinguish between different error conditions and have different alerts for them, use the second parameter of alert function - the alert\_id.
+If you want to distinguish between different error conditions and have different alerts for them, use the second parameter of alert function - the **alert\_id**.
 
 Example:
 
