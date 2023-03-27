@@ -22,9 +22,9 @@ This platform periodicaly runs your checkers.
 ## Performance ##
 
 In other monitoring platforms, running custom checks involves running an external program, which is
-expensive in terms of CPU and RAM.
+**expensive** in terms of CPU and RAM.
 
-Asmon allows developers to create custom checks in **Python** using *asyncronous* functions. Each check consumes approximately 10KB of memory, so you can run **100 000 simultanious checks** per gigabyte of RAM.
+Asmon allows developers to create custom checks in Python using *asyncronous* functions. Each check consumes approximately 10KB of memory, so you can run **100 000 simultanious checks per gigabyte of RAM**.
 
 The check speed depends on the check function complexity. For example, when checking SSL certificate
 expiration, you can expect a speed of about **1 000 checks/sec** on the cheapest VM available
