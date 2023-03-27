@@ -73,11 +73,15 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
 
             e_name = type(e).__name__
             filename, funcname, parameter = alert_prefix
+            if e_name == "Exception":
+                if not str(e):
+                    # skip alerts about Exception(), this is a special exception
+                    continue
+                e_name = ""
 
-            msg = f"проверка упала с ошибкой {e_name}:{filename}, функция {funcname}"
+            msg = f"проверка упала с ошибкой {e_name} {str(e)}:{filename}, функция {funcname}"
             if isinstance(e, TimeoutError):
                 msg = f"таймаут {filename}:{funcname}"
-
 
             if parameter is not None:
                 msg += f"({parameter})"
