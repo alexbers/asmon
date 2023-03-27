@@ -5,6 +5,7 @@
 # See more examples in asmon_checkers.py
 
 import asyncio
+import json
 
 import httpx
 
@@ -39,14 +40,22 @@ async def check_certs(host):
 # more complex checks, shows how easy you can write custom checks
 # alert_repeat_after is a reminder period for alerts
 @checker(pause=5, alerts_repeat_after=60*60*48, timeout=60)
-async def check_wikipedia():
+async def check_rest_api():
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get("https://wikipedia.org/", follow_redirects=True)
+            resp = await client.get("https://reqres.in/api/users")
             if resp.status_code != 200:
-                alert(f"википедия вернула плохой статус ответа {resp.status_code}")
+                alert(f"тестовый rest-сервис вернул плохой статус ответа {resp.status_code}")
+                return
+            if "data" not in resp.json():
+                alert(f"тестовый rest-сервис вернул json без поля 'data'")
 
-            if "wikipedia" not in resp.text:
-                alert(f"википедия вернула плохую страничку")
-    except OSError as E:
-        alert(f"википедия недоступна {E}")
+    except httpx.RequestError as E:
+        alert(f"сайт с погодой недоступен {E}")
+    except json.decoder.JSONDecodeError:
+        alert("тестовый rest-сервис вернул плохой json")
+
+
+if __name__ == "__main__":
+    # an example how to check if the rule works
+    asyncio.run(check_rest_api())
