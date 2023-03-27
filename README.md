@@ -1,18 +1,10 @@
-# Async Monitoring #
+# Asmon - Asyncronous Monitoring Platform #
 
-Asmon is the asyncronous platform to check your services and send Telegram alerts if something goes wrong.
+Asmon is a Python platform to monitor your services and send Telegram alerts if something goes wrong.
 
-The platform periodicaly runs your checkers written on Python.
+This platform periodicaly runs your checkers.
 
 ![Demo](https://alexbers.com/asmon.png)
-
-## Starting Up ##
-    
-1. `git clone https://github.com/alexbers/asmon.git; cd asmon`
-2. edit *config.py*, set **TG_DEST_ID**, and **BOT_TOKEN**
-3. `docker-compose up -d` (or just `python3 asmon.py` if you don't like Docker)
-4. modify check_example.py with your checks, platform runs them automatically
-
 
 ## Goals ##
 
@@ -20,13 +12,19 @@ The platform periodicaly runs your checkers written on Python.
 2. Speed
 3. Small amount of code
 
+## Starting Up ##
+
+1. `git clone https://github.com/alexbers/asmon.git; cd asmon`
+2. edit *config.py*, set **TG_DEST_ID**, and **BOT_TOKEN**
+3. `docker-compose up -d` (or just `python3 asmon.py` if you don't like Docker)
+4. modify check_example.py with your checks, platform runs them automatically
 
 ## Performance ##
 
 In other monitoring platforms, running custom checks involves running an external program, which is
 expensive in terms of CPU and RAM.
 
-Asmon allows developers to create custom checks in Python using asyncronous functions. Each check task consumes approximately 10KB of memory, so you can run 100 000 simultanious tasks per gigabyte of RAM.
+Asmon allows developers to create custom checks in Python using asyncronous functions. Each check consumes approximately 10KB of memory, so you can run 100 000 simultanious checks per gigabyte of RAM.
 
 The check speed depends on the check function complexity. For example, when checking SSL certificate
 expiration, you can expect a speed of about 1 000 checks/sec on the cheapest VM available
