@@ -1,8 +1,8 @@
 # Async Monitoring #
 
-The asyncronous platform to check your services and send Telegram alerts if something goes wrong.
+Asmon is the asyncronous platform to check your services and send Telegram alerts if something goes wrong.
 
-The services are checked by periodicaly running your checkers written on Python.
+The platform periodicaly runs your checkers written on Python.
 
 ![Demo](https://alexbers.com/asmon.png)
 
@@ -23,12 +23,10 @@ The services are checked by periodicaly running your checkers written on Python.
 
 ## Performance ##
 
-In other platforms, running custom checks involves calling an external program, which can be
+In other monitoring platforms, running custom checks involves running an external program, which is
 expensive in terms of CPU and RAM.
 
-Asmon allows developers to create checkers in Python using asyncronous functions. Each check task
-consumes approximately 10KB of memory, so you can have 100 000 simultanious tasks per
-gigabyte of RAM.
+Asmon allows developers to create checkers in Python using asyncronous functions. Each check task eats approximately 10KB of memory, so you can have 100 000 simultanious tasks per gigabyte of RAM.
 
 The check speed depends on the complexity of the check. For example, when checking SSL certificate
 expiration, you can expect a speed of about 1 000 checks per second on a modern CPU.
