@@ -83,7 +83,7 @@ async def handle_metrics(reader, writer):
 
         for filename, tasks in filename_to_tasks.items():
             metrics.append(["active_tasks", "counter", "tasks per file",
-                           {"filename": func_name, "val": len(tasks)}])
+                           {"filename": filename, "val": len(tasks)}])
 
         pkt = make_metrics_pkt(metrics)
 
