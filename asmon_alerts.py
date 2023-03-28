@@ -35,7 +35,8 @@ class Alert:
 
 
 def log(*args, **kwargs):
-    print(*args, **kwargs, file=sys.stderr, flush=True)
+    cur_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(cur_time, *args, **kwargs, file=sys.stderr, flush=True)
 
 
 def precheck_hook(args_str):

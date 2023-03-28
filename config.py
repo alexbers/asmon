@@ -12,3 +12,6 @@ CHECK_PAUSE = 10
 
 # time between alert queue rescans
 ALERT_PAUSE = 10
+
+# timezone
+TIMEZONE = "Asia/Yekaterinburg"

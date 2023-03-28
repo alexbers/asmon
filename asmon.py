@@ -3,6 +3,7 @@ import resource
 import os
 import time
 
+from config import TIMEZONE
 from asmon_core import run, checker
 from asmon_alerts import alert, log
 
@@ -15,7 +16,7 @@ def setup_files_limit():
         log("Failed to increase the limit of opened files")
 
 
-def init(timezone='Asia/Yekaterinburg'):
+def init(timezone=TIMEZONE):
     setup_files_limit()
     os.environ['TZ'] = timezone
     time.tzset()
