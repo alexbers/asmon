@@ -167,6 +167,14 @@ async def reg_checker_module(filename, full_filename):
         alert(f"Failed to load {filename}: {str(E)}")
 
 
+def cancel_task(filename):
+    for task in filename_to_tasks[filename]:
+        task.cancel()
+
+    filename_to_tasks.pop(filename, None)
+    gc.collect()
+
+
 async def run(directory=SCRIPT_PATH):
     file_name_ctx.set("asmon.py")
     prefix_ctx.set(("asmon.py", "core", None))
@@ -196,15 +204,11 @@ async def run(directory=SCRIPT_PATH):
                     else:
                         log("file", filename, "changed, reloading")
 
-                    for task in filename_to_tasks[filename]:
-                        task.cancel()
-
-                    filename_to_tasks.pop(filename, None)
+                    cancel_task(filename)
+                    filename_to_mod_time.pop(filename, None)
 
                     module = await asyncio.create_task(reg_checker_module(filename, full_filename))
                     filename_to_mod_time[filename] = mod_time
-
-                    gc.collect()
             except Exception:
                 log(f"failed to load {filename}")
                 traceback.print_exc()
@@ -213,14 +217,8 @@ async def run(directory=SCRIPT_PATH):
         for filename in set(filename_to_tasks) - set(checker_filenames):
             try:
                 log("file", filename, "deleted, unloading")
-
-                for task in filename_to_tasks[filename]:
-                    task.cancel()
-
-                filename_to_tasks.pop(filename, None)
+                cancel_task(filename)
                 filename_to_mod_time.pop(filename, None)
-                reset_checks_cnt(filename)
-                gc.collect()
             except Exception:
                 log(f"failed to unload {filename}")
                 traceback.print_exc()
