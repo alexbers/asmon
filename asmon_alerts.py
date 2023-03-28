@@ -12,7 +12,8 @@ fired_alerts_ctx = contextvars.ContextVar("fired_alerts", default=set())
 prefix_to_id_to_alert = defaultdict(dict)
 
 from config import BOT_TOKEN, TG_DEST_ID, ALERT_PAUSE
-from asmon_core import prefix_ctx, file_name_ctx, alerts_repeat_after_ctx, prefix_to_checks_cnt
+from asmon_core import (prefix_ctx, file_name_ctx, alerts_repeat_after_ctx,
+                        prefix_to_checks_cnt, filename_to_tasks)
 import asmon_metrics
 
 DEBUG = False
@@ -77,6 +78,7 @@ def alert(text, alert_id="default", repeat_after=None):
         log(text)
         return
 
+
     alert_id = str(alert_id)
     fired_alerts_ctx.get().add(alert_id)
 
@@ -136,7 +138,7 @@ async def send_new_alerts():
 
         good_alerts = []
         for a in alerts:
-            if not prefix_to_checks_cnt[a.prefix]:
+            if not prefix_to_checks_cnt[a.prefix] and a.prefix[1] != "__loading__":
                 # there was no checks after reloading
                 continue
 
@@ -173,7 +175,9 @@ async def send_new_alerts():
         if success:
             for alert in alerts_in_send_batch:
                 alert.last_send_time = cur_time
-                if alert.recovered:
+                filename = alert.prefix[0]
+                task_is_died = not filename_to_tasks[filename]
+                if alert.recovered or task_is_died:
                     # delete alert
                     if alert.alert_id in prefix_to_id_to_alert[alert.prefix]:
                         del prefix_to_id_to_alert[alert.prefix][alert.alert_id]

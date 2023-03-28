@@ -145,18 +145,26 @@ def checker(f=None, *, args=[], pause=CHECK_PAUSE,
 
     return decorator
 
-async def reg_checker_module(filename, full_filename):
-    file_name_ctx.set(filename)
 
-    # reset check counters
+def reset_checks_cnt(filename):
     for prefix, checks_cnt in prefix_to_checks_cnt.items():
         if prefix[0] == filename:
             prefix_to_checks_cnt[prefix] = 0
 
-    spec = importlib.util.spec_from_file_location(filename, full_filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+
+async def reg_checker_module(filename, full_filename):
+    file_name_ctx.set(filename)
+    reset_checks_cnt(filename)
+    prefix_ctx.set((filename, "__loading__", None))
+
+    try:
+        spec = importlib.util.spec_from_file_location(filename, full_filename)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    except Exception as E:
+        traceback.print_exc()
+        alert(f"Failed to load {filename}: {str(E)}")
 
 
 async def run(directory=SCRIPT_PATH):
@@ -169,17 +177,14 @@ async def run(directory=SCRIPT_PATH):
     filename_to_mod_time = {}
 
     PAUSE_RESCANS = 5
-
     STATS_EVERY = 12
 
     iter_num = 0
     while True:
         iter_num += 1
-        for filename in os.listdir(directory):
+        checker_filenames = [f for f in os.listdir(directory) if re.fullmatch(r"check_\S+\.py", f)]
+        for filename in checker_filenames:
             try:
-                if not re.fullmatch(r"check_\S+\.py", filename):
-                    continue
-
                 full_filename = os.path.join(directory, filename)
 
                 mod_time = os.path.getmtime(full_filename)
@@ -194,18 +199,32 @@ async def run(directory=SCRIPT_PATH):
                     for task in filename_to_tasks[filename]:
                         task.cancel()
 
-                    filename_to_tasks[filename] = []
+                    filename_to_tasks.pop(filename, None)
 
                     module = await asyncio.create_task(reg_checker_module(filename, full_filename))
                     filename_to_mod_time[filename] = mod_time
 
                     gc.collect()
-
             except Exception:
                 log(f"failed to load {filename}")
                 traceback.print_exc()
                 exceptions_cnt["core"] += 1
 
+        for filename in set(filename_to_tasks) - set(checker_filenames):
+            try:
+                log("file", filename, "deleted, unloading")
+
+                for task in filename_to_tasks[filename]:
+                    task.cancel()
+
+                filename_to_tasks.pop(filename, None)
+                filename_to_mod_time.pop(filename, None)
+                reset_checks_cnt(filename)
+                gc.collect()
+            except Exception:
+                log(f"failed to unload {filename}")
+                traceback.print_exc()
+                exceptions_cnt["core"] += 1
 
         try:
             if iter_num % STATS_EVERY == 0:
@@ -215,7 +234,6 @@ async def run(directory=SCRIPT_PATH):
 
                     for prefix, checks_count in prefix_to_checks_cnt.items():
                         log(f" {prefix_to_str(prefix)} {checks_count} checks")
-
         except Exception:
             traceback.print_exc()
             exceptions_cnt["core"] += 1
