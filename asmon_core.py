@@ -19,7 +19,7 @@ filename_to_tasks = defaultdict(list)
 prefix_to_checks_cnt = Counter()
 
 from config import CHECK_PAUSE
-from asmon_alerts import precheck_hook, postcheck_hook, alert_sender_loop, log, alert
+from asmon_alerts import precheck_hook, postcheck_hook, alert_sender_loop, log, alert, alert_stats_loop
 from asmon_metrics import start_metrics_srv, exceptions_cnt, prefix_to_str
 
 
@@ -180,12 +180,12 @@ async def run(directory=SCRIPT_PATH):
     prefix_ctx.set(("asmon.py", "core", None))
 
     alert_sender = asyncio.create_task(alert_sender_loop())
-    metrics_hadler = asyncio.create_task(start_metrics_srv())
+    stat_printer = asyncio.create_task(alert_stats_loop())
+    metrics_handler = asyncio.create_task(start_metrics_srv())
 
     filename_to_mod_time = {}
 
     PAUSE_RESCANS = 5
-    STATS_EVERY = 12
 
     iter_num = 0
     while True:
@@ -224,16 +224,5 @@ async def run(directory=SCRIPT_PATH):
                 traceback.print_exc()
                 exceptions_cnt["core"] += 1
 
-        try:
-            if iter_num % STATS_EVERY == 0:
-                    log(f"Stats:")
-                    for filename, tasks in filename_to_tasks.items():
-                        log(f" {filename} {len(tasks)} tasks")
+        await asyncio.sleep(PAUSE_RESCANS)
 
-                    for prefix, checks_count in prefix_to_checks_cnt.items():
-                        log(f" {prefix_to_str(prefix)} {checks_count} checks")
-        except Exception:
-            traceback.print_exc()
-            exceptions_cnt["core"] += 1
-        finally:
-            await asyncio.sleep(PAUSE_RESCANS)

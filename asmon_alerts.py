@@ -195,3 +195,20 @@ async def alert_sender_loop():
             asmon_metrics.exceptions_cnt["alert_sender"] += 1
         finally:
             await asyncio.sleep(ALERT_PAUSE)
+
+
+async def alert_stats_loop():
+    STATS_PAUSE = 60
+    while True:
+        try:
+            if prefix_to_checks_cnt:
+                log(f"Stats:")
+            for prefix, checks_count in prefix_to_checks_cnt.items():
+                alerts_count = len(prefix_to_id_to_alert[prefix])
+                str_prefix = asmon_metrics.prefix_to_str(prefix)
+                log(f" {str_prefix} {checks_count} checks, {alerts_count} active alerts")
+        except Exception:
+            traceback.print_exc()
+            exceptions_cnt["alert_printer"] += 1
+        finally:
+            await asyncio.sleep(STATS_PAUSE)

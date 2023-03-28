@@ -22,7 +22,7 @@ async def just_check():
     """
 
     # comment and uncomment the next line to test the dynamic reloading
-    alert("this is test alert, please edit check_example.py")
+    alert("this is a test alert, please edit check_example.py")
 
 
 # @checker(pause=5, timeout=20)
