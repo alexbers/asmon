@@ -4,6 +4,7 @@ import traceback
 from collections import Counter
 
 from asmon_core import filename_to_tasks, prefix_to_checks_cnt
+from asmon_alerts import prefix_to_id_to_alert
 
 from config import IP_WHITELIST
 
@@ -73,16 +74,25 @@ async def handle_metrics(reader, writer):
         metrics.append(["tasks", "counter", "number of tasks", len(asyncio.all_tasks())])
         metrics.append(['checks_total', "counter", "number of checks", sum(prefix_to_checks_cnt.values())])
 
+        active_alerts = sum(len(vals) for vals in prefix_to_id_to_alert.values())
+        metrics.append(['alerts_total', "counter", "number of alerts", active_alerts])
+
         for prefix, count in prefix_to_checks_cnt.items():
-            metrics.append(["checks", "counter", "checks counter",
+            metrics.append(["checks", "counter", "checks counter by prefix",
                            {"prefix": prefix_to_str(prefix), "val": count}])
 
+
+        for prefix, id_to_alert in prefix_to_id_to_alert.items():
+            metrics.append(["alerts", "counter", "alerts counter by prefix",
+                           {"prefix": prefix_to_str(prefix), "val": len(id_to_alert)}])
+
+
         for func_name, count in exceptions_cnt.items():
-            metrics.append(["exceptions", "counter", "exceptions counter",
+            metrics.append(["exceptions", "counter", "exceptions counter by function",
                            {"function": func_name, "val": count}])
 
         for filename, tasks in filename_to_tasks.items():
-            metrics.append(["active_tasks", "counter", "tasks per file",
+            metrics.append(["active_tasks", "counter", "tasks by filename",
                            {"filename": filename, "val": len(tasks)}])
 
         pkt = make_metrics_pkt(metrics)

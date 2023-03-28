@@ -8,8 +8,10 @@ from dataclasses import dataclass
 
 import httpx
 
-from config import BOT_TOKEN, TG_DEST_ID, ALERT_PAUSE
+fired_alerts_ctx = contextvars.ContextVar("fired_alerts", default=set())
+prefix_to_id_to_alert = defaultdict(dict)
 
+from config import BOT_TOKEN, TG_DEST_ID, ALERT_PAUSE
 from asmon_core import prefix_ctx, file_name_ctx, alerts_repeat_after_ctx, prefix_to_checks_cnt
 import asmon_metrics
 
@@ -18,8 +20,6 @@ DEBUG = False
 MAX_TG_MSG_LEN = 4096
 MAX_ALERT_MSG_LEN = 1024
 
-fired_alerts_ctx = contextvars.ContextVar("fired_alerts", default=set())
-prefix_to_id_to_alert = defaultdict(dict)
 
 @dataclass
 class Alert:
