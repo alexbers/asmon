@@ -10,8 +10,5 @@ IP_WHITELIST = None
 # default pause between checks
 CHECK_PAUSE = 10
 
-# time between alert queue rescans
-ALERT_PAUSE = 10
-
 # timezone
 TIMEZONE = "Asia/Yekaterinburg"

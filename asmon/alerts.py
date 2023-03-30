@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from config import BOT_TOKEN, TG_DEST_ID, ALERT_PAUSE
+from config import BOT_TOKEN, TG_DEST_ID
 from .commons import (log, prefix_to_id_to_alert, prefix_to_str, prefix_ctx,
                       file_name_ctx, alerts_repeat_after_ctx,
                       filename_to_tasks, prefix_to_checks_cnt)
@@ -180,6 +180,7 @@ async def send_new_alerts():
 
 
 async def alert_sender_loop():
+    ALERT_PAUSE = 10
     while True:
         try:
             await send_new_alerts()
