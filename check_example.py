@@ -2,7 +2,7 @@
 # Files that starts with checks_ are loaded automatically
 # If file is modified it is reloaded
 
-# See more examples in asmon_checkers.py
+# See more examples in checks.py
 
 import asyncio
 import json
@@ -10,7 +10,7 @@ import json
 import httpx
 
 from asmon import checker, alert
-import asmon_checkers
+import checks
 
 @checker
 async def just_check():
@@ -29,9 +29,9 @@ async def just_check():
 # async def check_google_port80():
 #     """
 #     An example of basic checker, checks if TCP port is open every 5 seconds.
-#     Also you can use checkers from asmon_checkers, see more examples there
+#     Also you can use checker functions from checks.py, see more examples there
 #     """
-#     await asmon_checkers.check_tcp_port("google.com", 80)
+#     await checks.check_tcp_port("google.com", 80)
 
 
 # @checker(args=["ya.ru", "google.com"], pause=1*60*60, timeout=60)
@@ -39,7 +39,7 @@ async def just_check():
 #     """
 #     You can specify several hosts to check, every arg is a task
 #     """
-#     await asmon_checkers.check_cert_expire(host, days=10000)
+#     await checks.check_cert_expire(host, days=10000)
 
 
 # @checker(pause=60, alerts_repeat_after=60*60*48, timeout=30)

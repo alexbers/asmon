@@ -2,7 +2,7 @@
 
 Asmon is a Python platform to monitor your services and send Telegram alerts if something goes wrong.
 
-This platform periodicaly runs your checkers.
+This platform periodicaly runs your checks.
 
 ![Demo](https://alexbers.com/asmon.png)
 
@@ -75,13 +75,13 @@ check for TLS-certificate expiration:
 
 ```python
 from asmon import checker, alert
-import asmon_checkers
+import checks
 
 SITES_TO_CHECK = ["google.com", "microsoft.com"]
 
 @checker(args=SITES_TO_CHECK, pause=60, timeout=10, alerts_repeat_after=30)
 async def check_certs(host):
-    await asmon_checkers.check_cert_expire(host, days=100)
+    await checks.check_cert_expire(host, days=100)
 ```
 
 The platform sends messages about recoveries and reminds you about unrecovered alerts at intervals.

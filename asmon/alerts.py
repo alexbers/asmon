@@ -8,19 +8,17 @@ from dataclasses import dataclass
 
 import httpx
 
-fired_alerts_ctx = contextvars.ContextVar("fired_alerts", default=set())
-prefix_to_id_to_alert = defaultdict(dict)
-
 from config import BOT_TOKEN, TG_DEST_ID, ALERT_PAUSE
-from asmon_core import (prefix_ctx, file_name_ctx, alerts_repeat_after_ctx,
-                        prefix_to_checks_cnt, filename_to_tasks)
-import asmon_metrics
+from .commons import (log, prefix_to_id_to_alert, prefix_to_str, prefix_ctx,
+                      file_name_ctx, alerts_repeat_after_ctx,
+                      filename_to_tasks, prefix_to_checks_cnt)
+from . import metrics
 
 DEBUG = False
-
 MAX_TG_MSG_LEN = 4096
 MAX_ALERT_MSG_LEN = 1024
 
+fired_alerts_ctx = contextvars.ContextVar("fired_alerts", default=set())
 
 @dataclass
 class Alert:
@@ -32,11 +30,6 @@ class Alert:
     last_send_time: float
     repeat_after: float
     recovered: bool
-
-
-def log(*args, **kwargs):
-    cur_time = time.strftime("%Y-%m-%d %H:%M:%S")
-    print(cur_time, *args, **kwargs, file=sys.stderr, flush=True)
 
 
 def precheck_hook(args_str):
@@ -63,13 +56,13 @@ async def send_msg(user_id, text):
         async with httpx.AsyncClient() as client:
             resp = httpx.post(url, json=payload)
             if resp.status_code != 200:
-                asmon_metrics.tg_fails += 1
                 log(f"Failed to send msg to {user_id}: {text} " +
                     f"{resp.status_code} {resp.text}")
+                metrics.tg_fails += 1
             return resp.status_code == 200
     except OSError:
         traceback.print_exc()
-        asmon_metrics.exceptions_cnt["alert_sender"] += 1
+        metrics.exceptions_cnt["alert_sender"] += 1
         return False
 
 
@@ -192,7 +185,7 @@ async def alert_sender_loop():
             await send_new_alerts()
         except Exception:
             traceback.print_exc()
-            asmon_metrics.exceptions_cnt["alert_sender"] += 1
+            metrics.exceptions_cnt["alert_sender"] += 1
         finally:
             await asyncio.sleep(ALERT_PAUSE)
 
@@ -205,10 +198,10 @@ async def alert_stats_loop():
                 log(f"Stats:")
             for prefix, checks_count in prefix_to_checks_cnt.items():
                 alerts_count = len(prefix_to_id_to_alert[prefix])
-                str_prefix = asmon_metrics.prefix_to_str(prefix)
+                str_prefix = prefix_to_str(prefix)
                 log(f" {str_prefix} {checks_count} checks, {alerts_count} active alerts")
         except Exception:
             traceback.print_exc()
-            exceptions_cnt["alert_printer"] += 1
+            metrics.exceptions_cnt["alert_printer"] += 1
         finally:
             await asyncio.sleep(STATS_PAUSE)

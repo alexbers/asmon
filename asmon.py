@@ -4,8 +4,10 @@ import os
 import time
 
 from config import TIMEZONE
-from asmon_core import run, checker
-from asmon_alerts import alert, log
+from asmon.core import run
+from asmon.alerts import log
+
+SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 def setup_files_limit():
@@ -24,4 +26,4 @@ def init(timezone=TIMEZONE):
 
 if __name__ == "__main__":
     init()
-    asyncio.run(run())
+    asyncio.run(run(directory=SCRIPT_PATH))

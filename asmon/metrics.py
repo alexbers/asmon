@@ -3,22 +3,16 @@ import time
 import traceback
 from collections import Counter
 
-from asmon_core import filename_to_tasks, prefix_to_checks_cnt
-from asmon_alerts import prefix_to_id_to_alert
-
 from config import IP_WHITELIST
+from .commons import (prefix_to_str, prefix_to_id_to_alert, filename_to_tasks,
+                      prefix_to_checks_cnt)
+
+# metrics
+tg_fails = 0
+exceptions_cnt = Counter({"core": 0, "alert_sender": 0})
+
 
 START_TIME = time.time()
-
-# Metrics
-exceptions_cnt = Counter({"core": 0, "alert_sender": 0})
-tg_fails = 0
-
-
-def prefix_to_str(prefix):
-    if len(prefix) == 3 and not prefix[2]:
-        return f"{prefix[0]}:{prefix[1]}"
-    return f"{prefix[0]}:{prefix[1]}:{prefix[2]}"
 
 
 def make_metrics_pkt(metrics):

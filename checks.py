@@ -1,5 +1,5 @@
-# This file contains implementation of some common checkers
-# Use it as examples to develop your own checkers
+# This file contains implementation of some common checks
+# Use it as examples to develop your own
 # If you edit this file, it will be not autoreloaded
 
 import asyncio

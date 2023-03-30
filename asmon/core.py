@@ -6,26 +6,18 @@ import random
 import os
 import re
 import gc
-import functools
 import importlib.util
-from collections import defaultdict, Counter
-from contextvars import ContextVar
-
-prefix_ctx = ContextVar("prefix", default="")
-file_name_ctx = ContextVar("file_name", default="")
-alerts_repeat_after_ctx = ContextVar("alerts_repeat_after", default=float("inf"))
-
-filename_to_tasks = defaultdict(list)
-prefix_to_checks_cnt = Counter()
+from collections import defaultdict
 
 from config import CHECK_PAUSE
-from asmon_alerts import precheck_hook, postcheck_hook, alert_sender_loop, log, alert, alert_stats_loop
-from asmon_metrics import start_metrics_srv, exceptions_cnt, prefix_to_str
-
-
-SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
+from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
+                      alerts_repeat_after_ctx, filename_to_tasks,
+                      prefix_to_checks_cnt)
+from .alerts import precheck_hook, postcheck_hook, alert_sender_loop, alert, alert_stats_loop
+from . import metrics
 
 next_allowed_run = defaultdict(int)
+
 
 async def throttle_runs(key, pps):
     global next_allowed_run
@@ -88,7 +80,7 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
 
             alert(msg, "__exception__")
 
-            exceptions_cnt[prefix_to_str(alert_prefix)] += 1
+            metrics.exceptions_cnt[prefix_to_str(alert_prefix)] += 1
         finally:
             prefix_to_checks_cnt[alert_prefix] += 1
 
@@ -175,13 +167,13 @@ def cancel_task(filename):
     gc.collect()
 
 
-async def run(directory=SCRIPT_PATH):
+async def run(directory="."):
     file_name_ctx.set("asmon.py")
     prefix_ctx.set(("asmon.py", "core", None))
 
     alert_sender = asyncio.create_task(alert_sender_loop())
     stat_printer = asyncio.create_task(alert_stats_loop())
-    metrics_handler = asyncio.create_task(start_metrics_srv())
+    metrics_handler = asyncio.create_task(metrics.start_metrics_srv())
 
     filename_to_mod_time = {}
 
@@ -212,7 +204,7 @@ async def run(directory=SCRIPT_PATH):
             except Exception:
                 log(f"failed to load {filename}")
                 traceback.print_exc()
-                exceptions_cnt["core"] += 1
+                metrics.exceptions_cnt["core"] += 1
 
         for filename in set(filename_to_tasks) - set(checker_filenames):
             try:
@@ -222,7 +214,7 @@ async def run(directory=SCRIPT_PATH):
             except Exception:
                 log(f"failed to unload {filename}")
                 traceback.print_exc()
-                exceptions_cnt["core"] += 1
+                metrics.exceptions_cnt["core"] += 1
 
         await asyncio.sleep(PAUSE_RESCANS)
 
