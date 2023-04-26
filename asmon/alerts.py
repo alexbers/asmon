@@ -106,7 +106,7 @@ def format_seconds(sec):
     elif sec < 48*60*60:
         return f"{sec//60//60} ч."
     else:
-        return f"{sec//60//60/24} дн."
+        return f"{sec//60//60//24} дн."
 
 
 def form_filename_to_alerts():
