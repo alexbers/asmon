@@ -113,8 +113,14 @@ def checker(f=None, *, args=[], pause=CHECK_PAUSE,
             alerts_repeat_after=float("inf"), max_starts_per_sec=0,
             timeout=float("inf")):
     if not file_name_ctx.get():
-        # if script runs directly, do nothing
-        return f if f else lambda f: f
+        # if script runs directly, execute immidiately
+        if not f:
+            def new_f(f):
+                print(f"Dry running {f.__name__}({', '.join(map(repr, args))}):")
+                return asyncio.run(f(*args))
+            return new_f
+        print(f"Dry running {f.__name__}():")
+        return asyncio.run(f(*args))
 
     kwargs = {
         "pause": pause,

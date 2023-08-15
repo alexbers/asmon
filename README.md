@@ -19,6 +19,10 @@ This platform periodicaly runs your checks.
 3. `docker-compose up -d` (or just `python3 asmon.py` if you don't like Docker)
 4. modify check_example.py with your checks, platform runs them automatically
 
+## Dry Run ##
+
+To test your check script just run it *directly*: `python3 check_example.py`.
+
 ## Performance ##
 
 In other monitoring platforms, running custom checks involves running an external program, which is

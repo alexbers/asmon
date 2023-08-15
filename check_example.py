@@ -1,6 +1,7 @@
 # The example of check
 # Files that starts with checks_ are loaded automatically
 # If file is modified it is reloaded
+# For dry run just launch the script directly
 
 # See more examples in checks.py
 
@@ -60,8 +61,3 @@ async def just_check():
 #         alert(f"тестовый rest-сервис недоступен {E}")
 #     except json.decoder.JSONDecodeError:
 #         alert("тестовый rest-сервис вернул плохой json")
-
-
-if __name__ == "__main__":
-    # an example how to check if the rule works
-    asyncio.run(just_check())
