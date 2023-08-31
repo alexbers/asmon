@@ -13,7 +13,8 @@ from config import CHECK_PAUSE
 from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
                       alerts_repeat_after_ctx, filename_to_tasks,
                       prefix_to_checks_cnt)
-from .alerts import precheck_hook, postcheck_hook, alert_sender_loop, alert, alert_stats_loop
+from .alerts import (alert, precheck_hook, postcheck_hook, load_alerts,
+                     alert_sender_loop, alert_stats_loop, alert_save_loop)
 from . import metrics
 
 next_allowed_run = defaultdict(int)
@@ -176,9 +177,12 @@ def cancel_task(filename):
 async def run(directory="."):
     file_name_ctx.set("asmon.py")
     prefix_ctx.set(("asmon.py", "core", None))
+    
+    load_alerts()
 
     alert_sender = asyncio.create_task(alert_sender_loop())
     stat_printer = asyncio.create_task(alert_stats_loop())
+    alert_saver = asyncio.create_task(alert_save_loop())
     metrics_handler = asyncio.create_task(metrics.start_metrics_srv())
 
     filename_to_mod_time = {}

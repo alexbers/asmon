@@ -3,8 +3,9 @@ import contextvars
 import time
 import traceback
 import sys
-from collections import defaultdict
-from dataclasses import dataclass
+import os
+import json
+from dataclasses import dataclass, asdict
 
 import httpx
 
@@ -213,3 +214,41 @@ async def alert_stats_loop():
             metrics.exceptions_cnt["alert_printer"] += 1
         finally:
             await asyncio.sleep(STATS_PAUSE)
+
+
+async def alert_save_loop():
+    SAVE_PAUSE = 60
+    while True:
+        try:
+            with open("alerts.json.tmp", "w") as file:
+                for prefix, id_to_alert in prefix_to_id_to_alert.items():
+                    for alert in id_to_alert.values():
+                        file.write(json.dumps(asdict(alert), ensure_ascii=False) + "\n")
+
+            os.rename("alerts.json.tmp", "alerts.json")
+        except Exception:
+            traceback.print_exc()
+            metrics.exceptions_cnt["alert_saver"] += 1
+        finally:
+            await asyncio.sleep(SAVE_PAUSE)
+
+
+def load_alerts():
+    try:
+        loaded = 0
+        with open("alerts.json") as file:
+            for line in file:
+                try:
+                    alert = json.loads(line)
+                    alert["prefix"] = tuple(alert["prefix"])
+                    prefix = alert["prefix"]
+                    alert_id = alert["alert_id"]
+                    prefix_to_id_to_alert[prefix][alert_id] = Alert(**alert)
+                    loaded +=1
+                except Exception as E:
+                    log(f"bad line in alerts.json, {E}: {line}")
+            log(f"loaded {loaded} alerts from alerts.json")
+    except FileNotFoundError:
+        pass
+    except Exception:
+        traceback.print_exc()

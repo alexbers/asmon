@@ -1,6 +1,6 @@
 #!/bin/sh
 
-chown asmon:asmon /home/asmon/config.py
+chown asmon:asmon /home/asmon/ /home/asmon/config.py
 
 export PYTHONUNBUFFERED=1
 
