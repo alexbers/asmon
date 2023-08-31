@@ -16,7 +16,7 @@ This platform periodicaly runs your checks.
 
 1. `git clone https://github.com/alexbers/asmon.git; cd asmon`
 2. edit *config.py*, set **TG_DEST_ID**, and **BOT_TOKEN**
-3. `docker-compose up -d` (or just `python3 asmon.py` if you don't like Docker)
+3. `docker compose up -d` (or just `python3 asmon.py` if you don't like Docker)
 4. modify check_example.py with your checks, platform runs them automatically
 
 ## Dry Run ##
