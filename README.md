@@ -79,13 +79,13 @@ check for TLS-certificate expiration:
 
 ```python
 from asmon import checker, alert
-import checks
+import common_checks
 
 SITES_TO_CHECK = ["google.com", "microsoft.com"]
 
 @checker(args=SITES_TO_CHECK, pause=60, timeout=10, alerts_repeat_after=30)
 async def check_certs(host):
-    await checks.check_cert_expire(host, days=100)
+    await common_checks.check_cert_expire(host, days=100)
 ```
 
 The platform sends messages about recoveries and reminds you about unrecovered alerts at intervals.

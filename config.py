@@ -12,3 +12,6 @@ CHECK_PAUSE = 10
 
 # timezone
 TIMEZONE = "Asia/Yekaterinburg"
+
+# language, valid values are EN, RU
+LANGUAGE = "RU"

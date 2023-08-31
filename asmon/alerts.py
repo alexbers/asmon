@@ -8,13 +8,12 @@ from dataclasses import dataclass
 
 import httpx
 
-from config import BOT_TOKEN, TG_DEST_ID
+from config import BOT_TOKEN, TG_DEST_ID, LANGUAGE
 from .commons import (log, prefix_to_id_to_alert, prefix_to_str, prefix_ctx,
                       file_name_ctx, alerts_repeat_after_ctx,
                       filename_to_tasks, prefix_to_checks_cnt)
 from . import metrics
 
-DEBUG = False
 MAX_TG_MSG_LEN = 4096
 MAX_ALERT_MSG_LEN = 1024
 
@@ -38,6 +37,8 @@ def precheck_hook(args_str):
 
 def postcheck_hook():
     active = [a for a in prefix_to_id_to_alert[prefix_ctx.get()].values()]
+
+    # if alert not fired during the check, recover it
     for alert in active:
         if alert.alert_id not in fired_alerts_ctx.get():
             alert.last_update_time = time.time()
@@ -46,8 +47,6 @@ def postcheck_hook():
 
 async def send_msg(user_id, text):
     log("send_msg", user_id, text)
-    if DEBUG:
-        return True
 
     url = "https://api.telegram.org/bot%s/sendMessage" % BOT_TOKEN
     payload = {"chat_id": user_id, "text": text,}
@@ -72,7 +71,6 @@ def alert(text, alert_id="default", repeat_after=None):
         log(text)
         return
 
-
     alert_id = str(alert_id)
     fired_alerts_ctx.get().add(alert_id)
 
@@ -83,7 +81,6 @@ def alert(text, alert_id="default", repeat_after=None):
         text = text[:MAX_ALERT_MSG_LEN-3] + "..."
 
     prefix = prefix_ctx.get()
-
     id_to_alert = prefix_to_id_to_alert[prefix]
 
     if alert_id not in id_to_alert:
@@ -97,19 +94,19 @@ def alert(text, alert_id="default", repeat_after=None):
         id_to_alert[alert_id].recovered = False
 
 
-def format_seconds(sec):
+def format_seconds(sec, lang="EN"):
     sec = int(sec)
     if sec < 120:
-        return f"{sec} сек."
+        return f"{sec} сек." if lang == "RU" else f"{sec} sec."
     elif sec < 120*60:
-        return f"{sec//60} мин."
+        return f"{sec//60} мин." if lang == "RU" else f"{sec} min."
     elif sec < 48*60*60:
-        return f"{sec//60//60} ч."
+        return f"{sec//60//60} ч." if lang == "RU" else f"{sec} hours."
     else:
-        return f"{sec//60//60//24} дн."
+        return f"{sec//60//60//24} дн." if lang == "RU" else f"{sec} days."
 
 
-def form_filename_to_alerts():
+def make_filename_to_alerts():
     filename_to_alerts = {}
     for prefix, id_to_alert in prefix_to_id_to_alert.items():
         filename = prefix[0]
@@ -123,7 +120,7 @@ def form_filename_to_alerts():
 
 
 async def send_new_alerts():
-    filename_to_alerts = form_filename_to_alerts()
+    filename_to_alerts = make_filename_to_alerts()
     for filename, alerts in filename_to_alerts.items():
         msg = ""
         alerts_in_send_batch = []
@@ -149,13 +146,23 @@ async def send_new_alerts():
 
         for alert in good_alerts:
             if alert.recovered:
-                broken_time = format_seconds(cur_time - alert.start_time)
-                msg_part = f"🎉 починилось, было сломано {broken_time}: {alert.text}"
+                broken_time = format_seconds(cur_time - alert.start_time, lang=LANGUAGE)
+                if LANGUAGE == "RU":
+                    msg_part = f"🎉 починилось, было сломано {broken_time}: {alert.text}"
+                else:
+                    msg_part = f"🎉 fixed, was broken {broken_time}: {alert.text}"
             elif alert.last_send_time == 0:
-                msg_part = f"🔥 сломалось: {alert.text}"
+                if LANGUAGE == "RU":
+                    msg_part = f"🔥 сломалось: {alert.text}"
+                else:
+                    msg_part = f"🔥 broken: {alert.text}"
             else:
-                broken_time = format_seconds(cur_time - alert.start_time)
-                msg_part = f"⚠ сломано уже {broken_time}: {alert.text}"
+                broken_time = format_seconds(cur_time - alert.start_time, lang=LANGUAGE)
+                if LANGUAGE == "RU":
+                    msg_part = f"⏱ сломано уже {broken_time}: {alert.text}"
+                else:
+                    msg_part = f"⏱ broken for {broken_time}: {alert.text}"
+
             if len(msg) + len(msg_part) + 1 >= MAX_TG_MSG_LEN:
                 break
 
