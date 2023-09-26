@@ -1,18 +1,43 @@
 import asyncio
 import time
 import traceback
-from collections import Counter
+import contextvars
+from collections import Counter, defaultdict
 
 from config import IP_WHITELIST
 from .commons import (prefix_to_str, prefix_to_id_to_alert, filename_to_tasks,
-                      prefix_to_checks_cnt)
+                      prefix_to_checks_cnt, prefix_ctx)
 
 # metrics
 tg_fails = 0
 exceptions_cnt = Counter({"core": 0, "alert_sender": 0})
 
+# prefix => {description) => value
+user_metrics = defaultdict(dict)
+
+# current metrics
+new_metrics_ctx = contextvars.ContextVar("user_metrics", default=set())
 
 START_TIME = time.time()
+
+
+
+def metrics_precheck_hook(args_str):
+    new_metrics_ctx.set(set())
+
+
+def metrics_postcheck_hook():
+    new_metrics = new_metrics_ctx.get()
+    prefix = prefix_ctx.get()
+
+    # unset old metrics
+    user_metrics[prefix] = {k: v for k, v in user_metrics[prefix].items() if k in new_metrics}
+
+
+def metric(name, value):
+    new_metrics_ctx.get().add(name)
+    prefix = prefix_ctx.get()
+    user_metrics[prefix][name] = value
 
 
 def make_metrics_pkt(metrics):
@@ -88,6 +113,11 @@ async def handle_metrics(reader, writer):
         for filename, tasks in filename_to_tasks.items():
             metrics.append(["active_tasks", "counter", "tasks by filename",
                            {"filename": filename, "val": len(tasks)}])
+
+        for prefix, name_to_val in user_metrics.items():
+            for name, val in name_to_val.items():
+                metrics.append(["metric", "gauge", "user metrics",
+                               {"prefix": prefix_to_str(prefix), "name": name, "val": val}])
 
         pkt = make_metrics_pkt(metrics)
 

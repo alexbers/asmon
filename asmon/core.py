@@ -13,9 +13,10 @@ from config import CHECK_PAUSE
 from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
                       alerts_repeat_after_ctx, filename_to_tasks,
                       prefix_to_checks_cnt)
-from .alerts import (alert, precheck_hook, postcheck_hook, load_alerts,
+from .alerts import (alert, alerts_precheck_hook, alerts_postcheck_hook, load_alerts,
                      alert_sender_loop, alert_stats_loop, alert_save_loop)
-from . import metrics
+from .metrics import (metrics_precheck_hook, metrics_postcheck_hook, exceptions_cnt,
+                      start_metrics_srv)
 
 next_allowed_run = defaultdict(int)
 
@@ -58,9 +59,11 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
         try:
             await throttle_runs(throttler_key, max_starts_per_sec)
 
-            precheck_hook(args_str=str(args))
+            alerts_precheck_hook(args_str=str(args))
+            metrics_precheck_hook(args_str=str(args))
             await asyncio.wait_for(check_func(*args), timeout=timeout)
-            postcheck_hook()
+            metrics_postcheck_hook()
+            alerts_postcheck_hook()
         except Exception as e:
             traceback.print_exception(e)
 
@@ -81,7 +84,7 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
 
             alert(msg, "__exception__")
 
-            metrics.exceptions_cnt[prefix_to_str(alert_prefix)] += 1
+            exceptions_cnt[prefix_to_str(alert_prefix)] += 1
         finally:
             prefix_to_checks_cnt[alert_prefix] += 1
 
@@ -183,7 +186,7 @@ async def run(directory="."):
     alert_sender = asyncio.create_task(alert_sender_loop())
     stat_printer = asyncio.create_task(alert_stats_loop())
     alert_saver = asyncio.create_task(alert_save_loop())
-    metrics_handler = asyncio.create_task(metrics.start_metrics_srv())
+    metrics_handler = asyncio.create_task(start_metrics_srv())
 
     filename_to_mod_time = {}
 
@@ -214,7 +217,7 @@ async def run(directory="."):
             except Exception:
                 log(f"failed to load {filename}")
                 traceback.print_exc()
-                metrics.exceptions_cnt["core"] += 1
+                exceptions_cnt["core"] += 1
 
         for filename in set(filename_to_tasks) - set(checker_filenames):
             try:
@@ -224,7 +227,7 @@ async def run(directory="."):
             except Exception:
                 log(f"failed to unload {filename}")
                 traceback.print_exc()
-                metrics.exceptions_cnt["core"] += 1
+                exceptions_cnt["core"] += 1
 
         await asyncio.sleep(PAUSE_RESCANS)
 

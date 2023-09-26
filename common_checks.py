@@ -44,9 +44,10 @@ async def check_cert_expire(host, port=443, days=7, timeout=10, attempts=30):
         TIME_FMT = "%b %d %H:%M:%S %Y %Z"
         expire_time = time.mktime(time.strptime(cert["notAfter"], TIME_FMT))
 
-        time_left = int(expire_time - time.time())
-        if time_left < 60*60*24*days:
-            alert(f"сертификат {host} закончится через {time_left//60//60//24} дн.", 1)
+        days_left = (expire_time - time.time())/60/60/24
+        if days_left < days:
+            alert(f"сертификат {host} закончится через {int(days_left)} дн.", 1)
+        return days_left
 
     except (OSError, TimeoutError, asyncio.exceptions.TimeoutError) as E:
         err = str(E)

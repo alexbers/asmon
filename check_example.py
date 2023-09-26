@@ -10,7 +10,7 @@ import json
 
 import httpx
 
-from asmon import checker, alert
+from asmon import checker, alert, metric
 import common_checks
 
 @checker
@@ -39,8 +39,10 @@ async def just_check():
 # async def check_certs(host):
 #     """
 #     You can specify several hosts to check, every arg is a task
+#     You can export some data as metrics
 #     """
-#     await common_checks.check_cert_expire(host, days=10000)
+#     days_left = await common_checks.check_cert_expire(host, days=10000)
+#     metric("ssl_days_left", days_left)
 
 
 # @checker(pause=60, alerts_repeat_after=60*60*48, timeout=600)

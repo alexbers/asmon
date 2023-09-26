@@ -93,7 +93,15 @@ The platform sends messages about recoveries and reminds you about unrecovered a
 Scripts should be named `check_*.py`. If you modify a script, the platform will do its magic and
 automaticaly reload it.
 
-The platform exports its metrics in Prometheus format, so you can monitor the monitoring.
+The platform exports its metrics in Prometheus format, so you can monitor the monitoring. You can specify
+custom float metrics:
+```python
+from asmon import checker, metric
+
+@checker
+async def some_check():
+    metric("metric_name", 42)
+```
 
 For more examples, see `check_example.py`
 

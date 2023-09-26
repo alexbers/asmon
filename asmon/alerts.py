@@ -32,11 +32,11 @@ class Alert:
     recovered: bool
 
 
-def precheck_hook(args_str):
+def alerts_precheck_hook(args_str):
     fired_alerts_ctx.set(set())
 
 
-def postcheck_hook():
+def alerts_postcheck_hook():
     active = [a for a in prefix_to_id_to_alert[prefix_ctx.get()].values()]
 
     # if alert not fired during the check, recover it
