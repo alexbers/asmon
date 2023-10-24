@@ -120,11 +120,20 @@ def checker(f=None, *, args=[], pause=CHECK_PAUSE,
         # if script runs directly, execute immidiately
         if not f:
             def new_f(f):
-                print(f"Dry running {f.__name__}({', '.join(map(repr, args))}):")
-                return asyncio.run(f(*args))
+                if not args:
+                    print(f"Dry running {f.__name__}():")
+                    asyncio.run(f())
+                else:
+                    async def dry_runner():
+                        for arg in args:
+                            print(f"Dry running {f.__name__}({repr(arg)}):")
+                            await f(arg)
+
+                    asyncio.run(dry_runner())
             return new_f
         print(f"Dry running {f.__name__}():")
-        return asyncio.run(f(*args))
+        asyncio.run(f())
+        return
 
     kwargs = {
         "pause": pause,
