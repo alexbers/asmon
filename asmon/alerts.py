@@ -46,6 +46,12 @@ def alerts_postcheck_hook():
             alert.recovered = True
 
 
+def recover_alerts(filename):
+    filename_to_alerts = make_filename_to_alerts()
+    for alert in filename_to_alerts.get(filename, []):
+        alert.recovered = True
+
+
 async def send_msg(user_id, text):
     log("send_msg", user_id, text)
 

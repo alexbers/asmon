@@ -14,7 +14,7 @@ from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
                       alerts_repeat_after_ctx, filename_to_tasks,
                       prefix_to_checks_cnt)
 from .alerts import (alert, alerts_precheck_hook, alerts_postcheck_hook, load_alerts,
-                     alert_sender_loop, alert_stats_loop, alert_save_loop)
+                     alert_sender_loop, alert_stats_loop, alert_save_loop, recover_alerts)
 from .metrics import (metrics_precheck_hook, metrics_postcheck_hook, exceptions_cnt,
                       start_metrics_srv)
 
@@ -232,6 +232,7 @@ async def run(directory="."):
             try:
                 log("file", filename, "deleted, unloading")
                 cancel_task(filename)
+                recover_alerts(filename)
                 filename_to_mod_time.pop(filename, None)
             except Exception:
                 log(f"failed to unload {filename}")
