@@ -9,7 +9,6 @@ import gc
 import importlib.util
 from collections import defaultdict
 
-from config import CHECK_PAUSE
 from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
                       alerts_repeat_after_ctx, filename_to_tasks,
                       prefix_to_checks_cnt)
@@ -92,9 +91,7 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
             await asyncio.sleep(cur_pause)
 
 
-def reg_checker(checker, subj=None, pause=CHECK_PAUSE,
-                alerts_repeat_after=float("inf"), max_starts_per_sec=0,
-                timeout=float("inf")):
+def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, timeout):
     if subj is None:
         args = []
     else:
@@ -113,9 +110,9 @@ def reg_checker(checker, subj=None, pause=CHECK_PAUSE,
     filename_to_tasks[filename].append(task)
 
 
-def checker(f=None, *, args=[], pause=CHECK_PAUSE,
-            alerts_repeat_after=float("inf"), max_starts_per_sec=0,
-            timeout=float("inf")):
+def checker(f=None, *, args=[], pause=None,
+            alerts_repeat_after=None, max_starts_per_sec=None,
+            timeout=None):
     if not file_name_ctx.get():
         # if script runs directly, execute immidiately
         if not f:
@@ -135,6 +132,18 @@ def checker(f=None, *, args=[], pause=CHECK_PAUSE,
         asyncio.run(f())
         return
 
+    module_globals = f.__globals__
+
+    if pause is None:
+        DEFAULT_CHECKER_PAUSE = 60
+        pause = module_globals.get("CHECKER_PAUSE", DEFAULT_CHECKER_PAUSE)
+    if alerts_repeat_after is None:
+        alerts_repeat_after = module_globals.get("CHECKER_ALERTS_REPEAT_AFTER", float("inf"))
+    if max_starts_per_sec is None:
+        max_starts_per_sec = module_globals.get("CHECKER_MAX_STARTS_PER_SEC", 0)
+    if timeout is None:
+        timeout = module_globals.get("CHECKER_TIMEOUT", float("inf"))
+
     kwargs = {
         "pause": pause,
         "alerts_repeat_after": alerts_repeat_after,
@@ -143,12 +152,12 @@ def checker(f=None, *, args=[], pause=CHECK_PAUSE,
     }
 
     if f:
-        reg_checker(f, **kwargs)
+        reg_checker(f, subj=None, **kwargs)
         return f
 
     def decorator(f):
         if not args:
-            reg_checker(f, **kwargs)
+            reg_checker(f, subj=None, **kwargs)
         else:
             for arg in args:
                 reg_checker(f, subj=arg, **kwargs)

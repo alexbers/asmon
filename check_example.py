@@ -13,6 +13,19 @@ import httpx
 from asmon import checker, alert, metric
 import common_checks
 
+# Pause between checks in this module. Default is 60
+CHECKER_PAUSE = 60
+
+# Checker timeout in this module. Default is infinite
+CHECKER_TIMEOUT = 600
+
+# Repeat alerts in secs. Default is never repeat
+CHECKER_ALERTS_REPEAT_AFTER = 1 * 60 * 60
+
+# Start single check function not more that this num per second. Default is no throttling
+CHECKER_MAX_STARTS_PER_SEC = 100
+
+
 @checker
 async def just_check():
     """
