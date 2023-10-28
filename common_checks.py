@@ -26,7 +26,7 @@ async def check_tcp_port(host, port, timeout=10, attempts=30):
         err = str(E)
         if not err:
             err = type(E).__name__
-        alert(f"недоступен порт {port} на узле {host}: {err}")
+        alert(f"port {port} on host {host} is unreachable: {err}")
     finally:
         if writer:
             writer.close()
@@ -46,14 +46,14 @@ async def check_cert_expire(host, port=443, days=7, timeout=10, attempts=30):
 
         days_left = (expire_time - time.time())/60/60/24
         if days_left < days:
-            alert(f"сертификат {host} закончится через {int(days_left)} дн.", 1)
+            alert(f"certificate on {host} will expire in {time_left//60//60//24} days", 1)
         return days_left
 
     except (OSError, TimeoutError, asyncio.exceptions.TimeoutError) as E:
         err = str(E)
         if not err:
             err = type(E).__name__
-        alert(f"недоступен порт {port} на узле {host}: {err}")
+        alert(f"port {port} on host {host} is unreachable: {err}")
     finally:
         if writer:
             writer.close()

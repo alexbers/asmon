@@ -55,11 +55,11 @@ async def just_check():
 #         async with httpx.AsyncClient() as client:
 #             resp = await client.get("https://reqres.in/api/users", timeout=300)
 #             if resp.status_code != 200:
-#                 alert(f"тестовый rest-сервис вернул плохой статус ответа {resp.status_code}")
+#                 alert(f"test rest-service returned bad answer status {resp.status_code}")
 #                 return
 #             if "data" not in resp.json():
-#                 alert(f"тестовый rest-сервис вернул json без поля 'data'")
+#                 alert(f"test rest-service returned json without 'data' field")
 #     except httpx.RequestError as E:
-#         alert(f"тестовый rest-сервис недоступен {E}")
+#         alert(f"test rest-service is unavailable {E}")
 #     except json.decoder.JSONDecodeError:
-#         alert("тестовый rest-сервис вернул плохой json")
+#         alert("test rest-service returned bad json")
