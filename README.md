@@ -1,6 +1,6 @@
 # Asmon — Asyncronous Monitoring Platform #
 
-Asmon is a Python platform to monitor your services and send Telegram alerts if something goes wrong.
+Asmon is a Python platform to monitor your services, produce metrics, and send Telegram alerts if something goes wrong.
 
 This platform periodicaly runs your checks.
 
@@ -9,7 +9,7 @@ This platform periodicaly runs your checks.
 ## Goals ##
 
 1. Customizability, unlimited checking and alerting posibilities
-2. Speed
+2. Low CPU and memory consumption even on thousands checks
 3. Small amount of code
 
 ## Starting Up ##
@@ -17,7 +17,8 @@ This platform periodicaly runs your checks.
 1. `git clone https://github.com/alexbers/asmon.git; cd asmon`
 2. edit *config.py*, set **TG_DEST_ID**, and **BOT_TOKEN**
 3. `docker compose up -d` (or just `python3 asmon.py` if you don't like Docker)
-4. modify check_example.py with your checks, platform runs them automatically
+4. (optional) modify check_example.py with your checks, platform runs it automatically
+5. (optional) add check_somename.py, platform will run it automatically too
 
 ## Dry Run ##
 
@@ -61,7 +62,7 @@ async def check_rest_api():
             if "data" not in resp.json():
                 alert(f"rest service returned json without 'data' field")
     except httpx.RequestError as E:
-        alert(f"rest service is down: {E}")
+        alert(f"rest service is down: {E!r}")
     except json.decoder.JSONDecodeError:
         alert("rest service returned bad JSON")
 ```
@@ -73,19 +74,26 @@ The `checker` decorator also can have these arguments:
 - **max_starts_per_sec**: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
 - **alerts_repeat_after**: if alert remain active for a specified time, send a reminder message. Default: no reminders
 - **timeout**: timeout of check function. Default: no timeout
+- **if_in_a_row**: notify if event occurs some number of times in a row to prevent flapping. Default: 1
 
 Another example, *check_certs.py*, showing `checker` decorator usage with arguments and a built-in
 check for TLS-certificate expiration:
 
 ```python
-from asmon import checker, alert
-import common_checks
+from asmon import checker, alert, common_checks
 
 SITES_TO_CHECK = ["google.com", "microsoft.com"]
 
-@checker(args=SITES_TO_CHECK, pause=60, timeout=10, alerts_repeat_after=30)
+@checker(args=SITES_TO_CHECK, pause=60, timeout=60, alerts_repeat_after=1*60*60)
 async def check_certs(host):
-    await common_checks.check_cert_expire(host, days=100)
+    try:
+        days_left = await common_checks.get_cert_expire_days(host, timeout=10)
+        metric("ssl_days_left", days_left)
+        if days_left < 7:
+            alert(f"certificate on {host} will expire in {days_left:.01f} days")
+    except Exception as E:
+        alert(f"port 443 on host {host} is unreachable: {E!r}")
+
 ```
 
 The platform sends messages about recoveries and reminds you about unrecovered alerts at intervals.
@@ -93,15 +101,7 @@ The platform sends messages about recoveries and reminds you about unrecovered a
 Scripts should be named `check_*.py`. If you modify a script, the platform will do its magic and
 automaticaly reload it.
 
-The platform exports its metrics in Prometheus format, so you can monitor the monitoring. You can specify
-custom float metrics:
-```python
-from asmon import checker, metric
-
-@checker
-async def some_check():
-    metric("metric_name", 42)
-```
+You can export some values as metrics for Prometheus using a metric function.
 
 For more examples, see `check_example.py`
 

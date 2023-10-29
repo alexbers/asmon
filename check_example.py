@@ -1,17 +1,14 @@
-# The example of check
+# Use this file as check template.
 # Files that starts with checks_ are loaded automatically
 # If file is modified it is reloaded
 # For dry run just launch the script directly
-
-# See more examples in common_checks.py
 
 import asyncio
 import json
 
 import httpx
 
-from asmon import checker, alert, metric, set_checker_defaults
-import common_checks
+from asmon import checker, alert, metric, set_checker_defaults, common_checks
 
 set_checker_defaults(
     pause=15,                # pause between checks, default is 60
@@ -34,13 +31,19 @@ async def just_check():
     alert("this is a test alert, please edit check_example.py")
 
 
-# @checker(pause=5, timeout=600)
-# async def check_google_port80():
-#     """
-#     An example of basic checker, checks if TCP port is open every 5 seconds.
-#     Also you can use checker functions from common_checks.py, see more examples there
-#     """
-#     await common_checks.check_tcp_port("google.com", 80)
+@checker(pause=5, timeout=60)
+async def check_google_port80():
+    """
+    An example of basic checker, checks if TCP port is open every 5 seconds.
+    """
+
+    HOST = "alexbers.com"
+    PORT = 4439
+    try:
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(HOST, PORT), timeout=10)
+        writer.close()
+    except Exception as E:
+        alert(f"port {PORT} on host {HOST} is unreachable: {E!r}")
 
 
 # @checker(args=["ya.ru", "google.com"], pause=1*60*60, timeout=600)
@@ -49,8 +52,16 @@ async def just_check():
 #     You can specify several hosts to check, every arg is a task
 #     You can export some data as metrics
 #     """
-#     days_left = await common_checks.check_cert_expire(host, days=10000)
-#     metric("ssl_days_left", days_left)
+#     try:
+#         days_left = await common_checks.get_cert_expire_days(host, timeout=10)
+#         metric("ssl_days_left", days_left)
+
+#         if days_left < 10000:
+#             alert(f"certificate on {host} will expire in {days_left:.01f} days", 1)
+
+#     except Exception as E:
+#         alert(f"port 443 on host {host} is unreachable: {E!r}")
+
 
 
 # @checker(pause=60, alerts_repeat_after=60*60*48, timeout=600)
