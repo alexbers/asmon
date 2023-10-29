@@ -11,7 +11,7 @@ import httpx
 
 from config import BOT_TOKEN, TG_DEST_ID, LANGUAGE
 from .commons import (log, prefix_to_id_to_alert, prefix_to_str, prefix_ctx,
-                      file_name_ctx, alerts_repeat_after_ctx,
+                      file_name_ctx, alerts_repeat_after_ctx, if_in_a_row_ctx,
                       filename_to_tasks, prefix_to_checks_cnt)
 from . import metrics
 
@@ -78,11 +78,14 @@ async def send_msg(user_id, text):
         return False
 
 
-def alert(text, alert_id="default", repeat_after=None, if_in_a_row=1):
+def alert(text, alert_id="default", repeat_after=None, if_in_a_row=None):
     if not file_name_ctx.get():
         # if script runs directly, do nothing
         log(text)
         return
+
+    if if_in_a_row is None:
+        if_in_a_row = if_in_a_row_ctx.get()
 
     alert_id = str(alert_id)
     fired_alerts_ctx.get().add(alert_id)

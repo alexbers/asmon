@@ -11,7 +11,7 @@ from collections import defaultdict
 from contextvars import ContextVar
 
 from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
-                      alerts_repeat_after_ctx, filename_to_tasks,
+                      alerts_repeat_after_ctx, if_in_a_row_ctx, filename_to_tasks,
                       prefix_to_checks_cnt)
 from .alerts import (alert, alerts_precheck_hook, alerts_postcheck_hook, load_alerts,
                      alert_sender_loop, alert_stats_loop, alert_save_loop, recover_alerts)
@@ -20,17 +20,18 @@ from .metrics import (metrics_precheck_hook, metrics_postcheck_hook, exceptions_
 
 next_allowed_run = defaultdict(int)
 
-# the setable value of when alert reminders should be sent
+# the defaults, that are set with set_checker_defaults
 checker_defaults_ctx = ContextVar("checker_defaults", default={})
 
 
 def set_checker_defaults(pause=60, timeout=float("inf"),
-                         alerts_repeat_after=float("inf"), max_starts_per_sec=0):
+                         alerts_repeat_after=float("inf"), max_starts_per_sec=0, if_in_a_row=1):
     defaults = {
         "pause": pause,
         "timeout": timeout,
         "alerts_repeat_after": alerts_repeat_after,
-        "max_starts_per_sec": max_starts_per_sec
+        "max_starts_per_sec": max_starts_per_sec,
+        "if_in_a_row": if_in_a_row
     }
     checker_defaults_ctx.set(defaults)
 
@@ -54,11 +55,12 @@ async def throttle_runs(key, pps):
 
 
 
-async def run_checkloop(check_func, args, pause, alert_prefix=(),
-                        alerts_repeat_after=float("inf"), max_starts_per_sec=0,
-                        timeout=float("inf")):
+async def run_checkloop(check_func, args, pause, alert_prefix,
+                        alerts_repeat_after, max_starts_per_sec,
+                        timeout, if_in_a_row):
     prefix_ctx.set(alert_prefix)
     alerts_repeat_after_ctx.set(alerts_repeat_after)
+    if_in_a_row_ctx.set(if_in_a_row)
 
     try:
         pause_min, pause_max = pause
@@ -106,7 +108,7 @@ async def run_checkloop(check_func, args, pause, alert_prefix=(),
             await asyncio.sleep(cur_pause)
 
 
-def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, timeout):
+def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, timeout, if_in_a_row):
     if subj is None:
         args = []
     else:
@@ -118,7 +120,8 @@ def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, t
 
     checkloop = run_checkloop(checker, args, pause, alert_prefix=alert_prefix,
                               alerts_repeat_after=alerts_repeat_after,
-                              max_starts_per_sec=max_starts_per_sec,timeout=timeout)
+                              max_starts_per_sec=max_starts_per_sec,
+                              timeout=timeout, if_in_a_row=if_in_a_row)
 
     task = asyncio.create_task(checkloop)
 
@@ -127,7 +130,7 @@ def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, t
 
 def checker(f=None, *, args=[], pause=None,
             alerts_repeat_after=None, max_starts_per_sec=None,
-            timeout=None):
+            timeout=None, if_in_a_row=None):
     if not file_name_ctx.get():
         # if script runs directly, execute immidiately
         if not f:
@@ -158,12 +161,15 @@ def checker(f=None, *, args=[], pause=None,
         max_starts_per_sec = defaults.get("max_starts_per_sec", 0)
     if timeout is None:
         timeout = defaults.get("timeout", float("inf"))
+    if if_in_a_row is None:
+        if_in_a_row = defaults.get("if_in_a_row", 1)
 
     kwargs = {
         "pause": pause,
         "alerts_repeat_after": alerts_repeat_after,
         "max_starts_per_sec": max_starts_per_sec,
-        "timeout": timeout
+        "timeout": timeout,
+        "if_in_a_row": if_in_a_row
     }
 
     if f:

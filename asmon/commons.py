@@ -22,6 +22,9 @@ file_name_ctx = ContextVar("file_name", default="")
 # the setable value of when alert reminders should be sent
 alerts_repeat_after_ctx = ContextVar("alerts_repeat_after", default=float("inf"))
 
+# the setable value of a number in a row the alert should happen to notify
+if_in_a_row_ctx = ContextVar("if_in_a_row", default=1)
+
 
 def prefix_to_str(prefix):
     if len(prefix) == 3 and not prefix[2]:
