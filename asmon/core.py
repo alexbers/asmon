@@ -8,6 +8,7 @@ import re
 import gc
 import importlib.util
 from collections import defaultdict
+from contextvars import ContextVar
 
 from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
                       alerts_repeat_after_ctx, filename_to_tasks,
@@ -18,6 +19,20 @@ from .metrics import (metrics_precheck_hook, metrics_postcheck_hook, exceptions_
                       start_metrics_srv)
 
 next_allowed_run = defaultdict(int)
+
+# the setable value of when alert reminders should be sent
+checker_defaults_ctx = ContextVar("checker_defaults", default={})
+
+
+def set_checker_defaults(pause=60, timeout=float("inf"),
+                         alerts_repeat_after=float("inf"), max_starts_per_sec=0):
+    defaults = {
+        "pause": pause,
+        "timeout": timeout,
+        "alerts_repeat_after": alerts_repeat_after,
+        "max_starts_per_sec": max_starts_per_sec
+    }
+    checker_defaults_ctx.set(defaults)
 
 
 async def throttle_runs(key, pps):
@@ -132,17 +147,17 @@ def checker(f=None, *, args=[], pause=None,
         asyncio.run(f())
         return
 
-    module_globals = f.__globals__
+    defaults = checker_defaults_ctx.get()
 
     if pause is None:
         DEFAULT_CHECKER_PAUSE = 60
-        pause = module_globals.get("CHECKER_PAUSE", DEFAULT_CHECKER_PAUSE)
+        pause = defaults.get("pause", DEFAULT_CHECKER_PAUSE)
     if alerts_repeat_after is None:
-        alerts_repeat_after = module_globals.get("CHECKER_ALERTS_REPEAT_AFTER", float("inf"))
+        alerts_repeat_after = defaults.get("alerts_repeat_after", float("inf"))
     if max_starts_per_sec is None:
-        max_starts_per_sec = module_globals.get("CHECKER_MAX_STARTS_PER_SEC", 0)
+        max_starts_per_sec = defaults.get("max_starts_per_sec", 0)
     if timeout is None:
-        timeout = module_globals.get("CHECKER_TIMEOUT", float("inf"))
+        timeout = defaults.get("timeout", float("inf"))
 
     kwargs = {
         "pause": pause,

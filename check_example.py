@@ -10,20 +10,15 @@ import json
 
 import httpx
 
-from asmon import checker, alert, metric
+from asmon import checker, alert, metric, set_checker_defaults
 import common_checks
 
-# Pause between checks in this module. Default is 60
-CHECKER_PAUSE = 60
-
-# Checker timeout in this module. Default is infinite
-CHECKER_TIMEOUT = 600
-
-# Repeat alerts in secs. Default is never repeat
-CHECKER_ALERTS_REPEAT_AFTER = 1 * 60 * 60
-
-# Start single check function not more that this num per second. Default is no throttling
-CHECKER_MAX_STARTS_PER_SEC = 100
+set_checker_defaults(
+    pause=15,                # pause between checks, default is 60
+    timeout=600,             # checker timeout, default is infinite
+    alerts_repeat_after=5,   # repeat alerts delay in secs, default is never repeat
+    max_starts_per_sec=100,  # throttle starts of a single check function, default is infinite
+)
 
 
 @checker
@@ -31,12 +26,11 @@ async def just_check():
     """
     I am just_check() function in check_example.py
     The system periodicaly runs me and gets my alerts
-    To make me run more often, modify CHECK_PAUSE in config.py
+    To make me run more often, modify set_checker_defaults call above
     You can modify me and system will reload me automatically
     """
 
-    # comment and uncomment the next line to test the dynamic reloading
-    alert("this is a test alert, please edit check_example.py")
+    alert("this is a test alert, please edit check_example.py", if_in_a_row=1)
 
 
 # @checker(pause=5, timeout=600)
