@@ -29,6 +29,8 @@ class Alert:
     last_update_time: float
     last_send_time: float
     repeat_after: float
+    in_a_row: int
+    send_if_in_a_row: int
     recovered: bool
 
 
@@ -44,6 +46,10 @@ def alerts_postcheck_hook():
         if alert.alert_id not in fired_alerts_ctx.get():
             alert.last_update_time = time.time()
             alert.recovered = True
+
+            # if alert flaps, remove it
+            if alert.in_a_row < alert.send_if_in_a_row:
+                delete_alert(alert)
 
 
 def recover_alerts(filename):
@@ -72,7 +78,7 @@ async def send_msg(user_id, text):
         return False
 
 
-def alert(text, alert_id="default", repeat_after=None):
+def alert(text, alert_id="default", repeat_after=None, if_in_a_row=1):
     if not file_name_ctx.get():
         # if script runs directly, do nothing
         log(text)
@@ -93,11 +99,15 @@ def alert(text, alert_id="default", repeat_after=None):
     if alert_id not in id_to_alert:
         id_to_alert[alert_id] = Alert(prefix, alert_id, text, start_time=time.time(),
                                       last_update_time=time.time(), last_send_time=0,
-                                      repeat_after=repeat_after, recovered=False)
+                                      repeat_after=repeat_after, in_a_row=1,
+                                      send_if_in_a_row=if_in_a_row,
+                                      recovered=False)
     else:
         id_to_alert[alert_id].text = text
         id_to_alert[alert_id].last_update_time = time.time()
         id_to_alert[alert_id].repeat_after = repeat_after
+        id_to_alert[alert_id].in_a_row += 1
+        id_to_alert[alert_id].send_if_in_a_row = if_in_a_row
         id_to_alert[alert_id].recovered = False
 
 
@@ -126,6 +136,13 @@ def make_filename_to_alerts():
     return filename_to_alerts
 
 
+def delete_alert(alert):
+    if alert.alert_id in prefix_to_id_to_alert[alert.prefix]:
+        del prefix_to_id_to_alert[alert.prefix][alert.alert_id]
+        if not prefix_to_id_to_alert[alert.prefix]:
+            del prefix_to_id_to_alert[alert.prefix]
+
+
 async def send_new_alerts():
     filename_to_alerts = make_filename_to_alerts()
     for filename, alerts in filename_to_alerts.items():
@@ -142,6 +159,10 @@ async def send_new_alerts():
 
             if a.last_update_time < a.last_send_time:
                 # the alert is not updated since the last report
+                continue
+
+            if not a.recovered and a.in_a_row < a.send_if_in_a_row:
+                # the alert is not fired enough
                 continue
 
             if (a.recovered or a.last_send_time == 0 or
@@ -186,11 +207,7 @@ async def send_new_alerts():
                 filename = alert.prefix[0]
                 task_is_died = not filename_to_tasks[filename]
                 if alert.recovered or task_is_died:
-                    # delete alert
-                    if alert.alert_id in prefix_to_id_to_alert[alert.prefix]:
-                        del prefix_to_id_to_alert[alert.prefix][alert.alert_id]
-                        if not prefix_to_id_to_alert[alert.prefix]:
-                            del prefix_to_id_to_alert[alert.prefix]
+                    delete_alert(alert)
 
 
 async def alert_sender_loop():
