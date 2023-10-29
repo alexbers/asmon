@@ -16,8 +16,9 @@ import common_checks
 set_checker_defaults(
     pause=15,                # pause between checks, default is 60
     timeout=600,             # checker timeout, default is infinite
-    alerts_repeat_after=5,   # repeat alerts delay in secs, default is never repeat
-    max_starts_per_sec=100,  # throttle starts of a single check function, default is infinite
+    alerts_repeat_after=60,  # repeat alerts delay in secs, default is never repeat
+    max_starts_per_sec=100,  # throttle starts of a single check function, default is infinite,
+    if_in_a_row=1            # alert only if it occurs this number in a row, default is 1
 )
 
 
@@ -30,7 +31,7 @@ async def just_check():
     You can modify me and system will reload me automatically
     """
 
-    alert("this is a test alert, please edit check_example.py", if_in_a_row=1)
+    alert("this is a test alert, please edit check_example.py")
 
 
 # @checker(pause=5, timeout=600)

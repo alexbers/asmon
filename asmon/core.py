@@ -2,7 +2,6 @@
 import asyncio
 import time
 import traceback
-import random
 import os
 import re
 import gc
@@ -62,11 +61,6 @@ async def run_checkloop(check_func, args, pause, alert_prefix,
     alerts_repeat_after_ctx.set(alerts_repeat_after)
     if_in_a_row_ctx.set(if_in_a_row)
 
-    try:
-        pause_min, pause_max = pause
-    except TypeError:
-        pause_min, pause_max = pause, pause
-
     await throttle_runs("start_check", 25)
 
     throttler_key = tuple(alert_prefix[:2])  # file and func
@@ -104,8 +98,7 @@ async def run_checkloop(check_func, args, pause, alert_prefix,
         finally:
             prefix_to_checks_cnt[alert_prefix] += 1
 
-            cur_pause = pause_min + random.random() * (pause_max-pause_min)
-            await asyncio.sleep(cur_pause)
+            await asyncio.sleep(pause)
 
 
 def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, timeout, if_in_a_row):
@@ -128,9 +121,8 @@ def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, t
     filename_to_tasks[filename].append(task)
 
 
-def checker(f=None, *, args=[], pause=None,
-            alerts_repeat_after=None, max_starts_per_sec=None,
-            timeout=None, if_in_a_row=None):
+def checker(f=None, *, args=[], pause=None, alerts_repeat_after=None,
+            max_starts_per_sec=None, timeout=None, if_in_a_row=None):
     if not file_name_ctx.get():
         # if script runs directly, execute immidiately
         if not f:
