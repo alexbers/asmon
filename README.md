@@ -18,7 +18,7 @@ This platform periodicaly runs your checks.
 2. edit *config.py*, set **TG_DEST_ID**, and **BOT_TOKEN**
 3. `docker compose up -d` (or just `python3 asmon.py` if you don't like Docker)
 4. (optional) modify check_example.py with your checks, platform runs it automatically
-5. (optional) add check_somename.py, platform will run it automatically too
+5. (optional) add check_somename.py, platform will find and run it automatically too
 
 ## Dry Run ##
 

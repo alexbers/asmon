@@ -5,7 +5,7 @@ import contextvars
 from collections import Counter, defaultdict
 
 from config import IP_WHITELIST
-from .commons import (prefix_to_str, prefix_to_id_to_alert, filename_to_tasks,
+from .commons import (log, prefix_to_str, prefix_to_id_to_alert, filename_to_tasks,
                       prefix_to_checks_cnt, prefix_ctx)
 
 # metrics
@@ -131,4 +131,8 @@ async def handle_metrics(reader, writer):
 
 
 async def start_metrics_srv():
-    await asyncio.start_server(handle_metrics, "0.0.0.0", 9325)
+    PORT = 9325
+    if not IP_WHITELIST:
+        log(f"to export metrics in the Prometheus format on port {PORT}, specify IP_WHITELIST in config.py")
+        return
+    await asyncio.start_server(handle_metrics, "0.0.0.0", PORT)

@@ -5,10 +5,10 @@ TG_DEST_ID = 123456789
 BOT_TOKEN = "9876543210:AABBCCDDDEEFFHHIIJJKKLLMMNNOOPPQQRRS"
 
 # whitelist for metrics
-IP_WHITELIST = None
+IP_WHITELIST = []
 
 # timezone
 TIMEZONE = "Asia/Yekaterinburg"
 
 # language, valid values are EN, RU
-LANGUAGE = "RU"
+LANGUAGE = "EN"
