@@ -15,10 +15,11 @@ This platform periodicaly runs your checks.
 ## Starting Up ##
 
 1. `git clone https://github.com/alexbers/asmon.git; cd asmon`
-2. edit *config.py*, set **TG_DEST_ID**, and **BOT_TOKEN**
+2. use *@BotFather* bot to  get your **BOT_TOKEN**, use *@userinfobot* to get your **TG_DEST_ID**
+3. edit *config.py*, set **TG_DEST_ID**, and **BOT_TOKEN**
 3. `docker compose up -d` (or just `python3 asmon.py` if you don't like Docker)
 4. (optional) modify check_example.py with your checks, platform runs it automatically
-5. (optional) add check_somename.py, platform will find and run it automatically too
+5. (optional) add check_\*.py, platform will find and run it automatically too
 
 ## Dry Run ##
 
@@ -92,7 +93,7 @@ async def check_certs(host):
         if days_left < 7:
             alert(f"certificate on {host} will expire in {days_left:.01f} days")
     except Exception as E:
-        alert(f"port 443 on host {host} is unreachable: {E!r}")
+        alert(f"port 443 on host {host} is unreachable: {E!r}", if_in_a_row=2)
 
 ```
 
