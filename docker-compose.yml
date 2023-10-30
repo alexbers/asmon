@@ -7,3 +7,7 @@ services:
       - ./:/home/asmon/
     restart: on-failure
     mem_limit: 2048m
+    command:
+      - 'bash'
+      - '-c'
+      - 'chown asmon:asmon /home/asmon/ /home/asmon/config.py; su -c "python3 -u asmon.py" asmon'
