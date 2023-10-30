@@ -1,14 +1,14 @@
 # Use this file as check template.
-# Files that starts with checks_ are loaded automatically
-# If file is modified it is reloaded
-# For dry run just launch the script directly
+# Files checks_*.py in this directory are loaded automatically
+# If they are modified they are reloaded
+# To dry run just launch the script directly
 
 import asyncio
 import json
 
 import httpx
 
-from asmon import checker, alert, metric, common_checks
+from asmon import checker, alert, metric, useful_checks
 
 
 @checker(pause=5)
@@ -16,7 +16,6 @@ async def just_check():
     """
     I am just_check() function in check_example.py
     The system periodicaly runs me and gets my alerts
-    To make me run more often, modify set_checker_defaults call above
     You can modify me and system will reload me automatically
     """
 
@@ -45,7 +44,7 @@ async def just_check():
 #     You can export some data as metrics
 #     """
 #     try:
-#         days_left = await common_checks.get_cert_expire_days(host, timeout=10)
+#         days_left = await useful_checks.get_cert_expire_days(host, timeout=10)
 #         metric("ssl_days_left", days_left)
 
 #         if days_left < 10000:

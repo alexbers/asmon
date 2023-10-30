@@ -80,14 +80,14 @@ Another example, *check_certs.py*, showing `checker` decorator usage with argume
 check for TLS-certificate expiration:
 
 ```python
-from asmon import checker, alert, common_checks
+from asmon import checker, alert, useful_checks
 
 SITES_TO_CHECK = ["google.com", "microsoft.com"]
 
 @checker(args=SITES_TO_CHECK, pause=60, timeout=60, renotify=1*60*60)
 async def check_certs(host):
     try:
-        days_left = await common_checks.get_cert_expire_days(host, timeout=10)
+        days_left = await useful_checks.get_cert_expire_days(host, timeout=10)
         metric("ssl_days_left", days_left)
         if days_left < 7:
             alert(f"certificate on {host} will expire in {days_left:.01f} days")
