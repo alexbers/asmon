@@ -19,21 +19,6 @@ from .metrics import (metrics_precheck_hook, metrics_postcheck_hook, exceptions_
 
 next_allowed_run = defaultdict(int)
 
-# the defaults, that are set with set_checker_defaults
-checker_defaults_ctx = ContextVar("checker_defaults", default={})
-
-
-def set_checker_defaults(pause=60, timeout=float("inf"),
-                         alerts_repeat_after=float("inf"), max_starts_per_sec=0, if_in_a_row=1):
-    defaults = {
-        "pause": pause,
-        "timeout": timeout,
-        "alerts_repeat_after": alerts_repeat_after,
-        "max_starts_per_sec": max_starts_per_sec,
-        "if_in_a_row": if_in_a_row
-    }
-    checker_defaults_ctx.set(defaults)
-
 
 async def throttle_runs(key, pps):
     global next_allowed_run
@@ -121,40 +106,22 @@ def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, t
     filename_to_tasks[filename].append(task)
 
 
-def checker(f=None, *, args=[], pause=None, alerts_repeat_after=None,
-            max_starts_per_sec=None, timeout=None, if_in_a_row=None):
+def checker(*, pause, timeout=None, args=[], alerts_repeat_after=float("inf"),
+            max_starts_per_sec=0, if_in_a_row=1):
     if not file_name_ctx.get():
         # if script runs directly, execute immidiately
-        if not f:
-            def new_f(f):
-                if not args:
-                    print(f"Dry running {f.__name__}():")
-                    asyncio.run(f())
-                else:
-                    async def dry_runner():
-                        for arg in args:
-                            print(f"Dry running {f.__name__}({repr(arg)}):")
-                            await f(arg)
+        def new_f(f):
+            if not args:
+                print(f"Dry running {f.__name__}():")
+                asyncio.run(f())
+            else:
+                async def dry_runner():
+                    for arg in args:
+                        print(f"Dry running {f.__name__}({arg!r}):")
+                        await f(arg)
 
-                    asyncio.run(dry_runner())
-            return new_f
-        print(f"Dry running {f.__name__}():")
-        asyncio.run(f())
-        return
-
-    defaults = checker_defaults_ctx.get()
-
-    if pause is None:
-        DEFAULT_CHECKER_PAUSE = 60
-        pause = defaults.get("pause", DEFAULT_CHECKER_PAUSE)
-    if alerts_repeat_after is None:
-        alerts_repeat_after = defaults.get("alerts_repeat_after", float("inf"))
-    if max_starts_per_sec is None:
-        max_starts_per_sec = defaults.get("max_starts_per_sec", 0)
-    if timeout is None:
-        timeout = defaults.get("timeout", float("inf"))
-    if if_in_a_row is None:
-        if_in_a_row = defaults.get("if_in_a_row", 1)
+                asyncio.run(dry_runner())
+        return new_f
 
     kwargs = {
         "pause": pause,
@@ -163,10 +130,6 @@ def checker(f=None, *, args=[], pause=None, alerts_repeat_after=None,
         "timeout": timeout,
         "if_in_a_row": if_in_a_row
     }
-
-    if f:
-        reg_checker(f, subj=None, **kwargs)
-        return f
 
     def decorator(f):
         if not args:

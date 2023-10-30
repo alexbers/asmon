@@ -51,7 +51,7 @@ import json
 import httpx
 from asmon import checker, alert
 
-@checker
+@checker(pause=10)
 async def check_rest_api():
     try:
         async with httpx.AsyncClient() as client:
@@ -113,7 +113,7 @@ If you want to distinguish between different error conditions and have different
 Example:
 
 ```python
-@checker
+@checker(pause=10)
 async def f():
    alert("AAAA", 1)
    alert("BBBB", 2)
@@ -124,7 +124,7 @@ This will produce two alerts: "AAAA" and "BBBB". If you comment them out, you wi
 If you want to skip the rest checks, for example, if the site is down, use
 
 ```python
-@checker
+@checker(pause=10)
 async def f():
     if ...:
         alert("site is down, skip checks")

@@ -8,18 +8,10 @@ import json
 
 import httpx
 
-from asmon import checker, alert, metric, set_checker_defaults, common_checks
-
-set_checker_defaults(
-    pause=15,                # pause between checks, default is 60
-    timeout=600,             # checker timeout, default is infinite
-    alerts_repeat_after=60,  # repeat alerts delay in secs, default is never repeat
-    max_starts_per_sec=100,  # throttle starts of a single check function, default is infinite,
-    if_in_a_row=1            # alert only if it occurs this number in a row, default is 1
-)
+from asmon import checker, alert, metric, common_checks
 
 
-@checker
+@checker(pause=5)
 async def just_check():
     """
     I am just_check() function in check_example.py
@@ -31,19 +23,19 @@ async def just_check():
     alert("this is a test alert, please edit check_example.py")
 
 
-@checker(pause=5, timeout=60)
-async def check_google_port80():
-    """
-    An example of basic checker, checks if TCP port is open every 5 seconds.
-    """
+# @checker(pause=5, timeout=60)
+# async def check_google_port80():
+#     """
+#     An example of basic checker, checks if TCP port is open every 5 seconds.
+#     """
 
-    HOST = "alexbers.com"
-    PORT = 4439
-    try:
-        reader, writer = await asyncio.wait_for(asyncio.open_connection(HOST, PORT), timeout=10)
-        writer.close()
-    except Exception as E:
-        alert(f"port {PORT} on host {HOST} is unreachable: {E!r}")
+#     HOST = "alexbers.com"
+#     PORT = 4439
+#     try:
+#         reader, writer = await asyncio.wait_for(asyncio.open_connection(HOST, PORT), timeout=10)
+#         writer.close()
+#     except Exception as E:
+#         alert(f"port {PORT} on host {HOST} is unreachable: {E!r}")
 
 
 # @checker(args=["ya.ru", "google.com"], pause=1*60*60, timeout=600)
