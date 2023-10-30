@@ -4,7 +4,7 @@ Asmon is a Python platform to monitor your services, produce metrics, and send T
 
 This platform periodicaly runs your checks.
 
-![Demo](https://alexbers.com/asmon.png)
+![Demo](https://alexbers.com/asmon_en.png)
 
 ## Goals ##
 
