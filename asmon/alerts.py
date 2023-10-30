@@ -30,7 +30,7 @@ class Alert:
     last_send_time: float
     renotify: float
     in_a_row: int
-    send_if_in_a_row: int
+    notify_if_in_a_row: int
     recovered: bool
 
 
@@ -48,7 +48,7 @@ def alerts_postcheck_hook():
             alert.recovered = True
 
             # if alert flaps, remove it
-            if alert.in_a_row < alert.send_if_in_a_row:
+            if alert.in_a_row < alert.notify_if_in_a_row:
                 delete_alert(alert)
 
 
@@ -103,14 +103,14 @@ def alert(text, alert_id="default", renotify=None, if_in_a_row=None):
         id_to_alert[alert_id] = Alert(prefix, alert_id, text, start_time=time.time(),
                                       last_update_time=time.time(), last_send_time=0,
                                       renotify=renotify, in_a_row=1,
-                                      send_if_in_a_row=if_in_a_row,
+                                      notify_if_in_a_row=if_in_a_row,
                                       recovered=False)
     else:
         id_to_alert[alert_id].text = text
         id_to_alert[alert_id].last_update_time = time.time()
         id_to_alert[alert_id].renotify = renotify
         id_to_alert[alert_id].in_a_row += 1
-        id_to_alert[alert_id].send_if_in_a_row = if_in_a_row
+        id_to_alert[alert_id].notify_if_in_a_row = if_in_a_row
         id_to_alert[alert_id].recovered = False
 
 
@@ -164,7 +164,7 @@ async def send_new_alerts():
                 # the alert is not updated since the last report
                 continue
 
-            if not a.recovered and a.in_a_row < a.send_if_in_a_row:
+            if not a.recovered and a.in_a_row < a.notify_if_in_a_row:
                 # the alert is not fired enough
                 continue
 
