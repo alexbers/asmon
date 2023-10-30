@@ -70,12 +70,12 @@ async def check_rest_api():
 
 The `checker` decorator also can have these arguments:
 
-- **args**: create multiple tasks, one per argument. Default: single task without arguments is created
 - **pause**: pause after check in seconds until the next check. Default: see config.py
-- **max_starts_per_sec**: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
-- **renotify**: if alert remain active for a specified time, send a reminder message. Default: no reminders
 - **timeout**: timeout of check function. Default: no timeout
+- **renotify**: if alert remain active for a specified time, send a reminder message. Default: no reminders
+- **max_starts_per_sec**: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
 - **if_in_a_row**: notify if event occurs some number of times in a row to prevent flapping. Default: 1
+- **args**: create multiple tasks, one per argument. Default: single task without arguments is created
 
 Another example, *check_certs.py*, showing `checker` decorator usage with arguments and a built-in
 check for TLS-certificate expiration:
