@@ -10,7 +10,7 @@ from collections import defaultdict
 from contextvars import ContextVar
 
 from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
-                      alerts_repeat_after_ctx, if_in_a_row_ctx, filename_to_tasks,
+                      renotify_ctx, if_in_a_row_ctx, filename_to_tasks,
                       prefix_to_checks_cnt)
 from .alerts import (alert, alerts_precheck_hook, alerts_postcheck_hook, load_alerts,
                      alert_sender_loop, alert_stats_loop, alert_save_loop, recover_alerts)
@@ -40,10 +40,10 @@ async def throttle_runs(key, pps):
 
 
 async def run_checkloop(check_func, args, pause, alert_prefix,
-                        alerts_repeat_after, max_starts_per_sec,
+                        renotify, max_starts_per_sec,
                         timeout, if_in_a_row):
     prefix_ctx.set(alert_prefix)
-    alerts_repeat_after_ctx.set(alerts_repeat_after)
+    renotify_ctx.set(renotify)
     if_in_a_row_ctx.set(if_in_a_row)
 
     await throttle_runs("start_check", 25)
@@ -86,7 +86,7 @@ async def run_checkloop(check_func, args, pause, alert_prefix,
             await asyncio.sleep(pause)
 
 
-def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, timeout, if_in_a_row):
+def reg_checker(checker, subj, pause, renotify, max_starts_per_sec, timeout, if_in_a_row):
     if subj is None:
         args = []
     else:
@@ -97,7 +97,7 @@ def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, t
     alert_prefix = (filename, checker.__name__, subj)
 
     checkloop = run_checkloop(checker, args, pause, alert_prefix=alert_prefix,
-                              alerts_repeat_after=alerts_repeat_after,
+                              renotify=renotify,
                               max_starts_per_sec=max_starts_per_sec,
                               timeout=timeout, if_in_a_row=if_in_a_row)
 
@@ -106,7 +106,7 @@ def reg_checker(checker, subj, pause, alerts_repeat_after, max_starts_per_sec, t
     filename_to_tasks[filename].append(task)
 
 
-def checker(*, pause, timeout=None, args=[], alerts_repeat_after=float("inf"),
+def checker(*, pause, timeout=None, args=[], renotify=float("inf"),
             max_starts_per_sec=0, if_in_a_row=1):
     if not file_name_ctx.get():
         # if script runs directly, execute immidiately
@@ -125,7 +125,7 @@ def checker(*, pause, timeout=None, args=[], alerts_repeat_after=float("inf"),
 
     kwargs = {
         "pause": pause,
-        "alerts_repeat_after": alerts_repeat_after,
+        "renotify": renotify,
         "max_starts_per_sec": max_starts_per_sec,
         "timeout": timeout,
         "if_in_a_row": if_in_a_row

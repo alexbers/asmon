@@ -11,7 +11,7 @@ import httpx
 
 from config import BOT_TOKEN, TG_DEST_ID, LANGUAGE
 from .commons import (log, prefix_to_id_to_alert, prefix_to_str, prefix_ctx,
-                      file_name_ctx, alerts_repeat_after_ctx, if_in_a_row_ctx,
+                      file_name_ctx, renotify_ctx, if_in_a_row_ctx,
                       filename_to_tasks, prefix_to_checks_cnt)
 from . import metrics
 
@@ -28,7 +28,7 @@ class Alert:
     start_time: float
     last_update_time: float
     last_send_time: float
-    repeat_after: float
+    renotify: float
     in_a_row: int
     send_if_in_a_row: int
     recovered: bool
@@ -78,7 +78,7 @@ async def send_msg(user_id, text):
         return False
 
 
-def alert(text, alert_id="default", repeat_after=None, if_in_a_row=None):
+def alert(text, alert_id="default", renotify=None, if_in_a_row=None):
     if not file_name_ctx.get():
         # if script runs directly, do nothing
         log(text)
@@ -90,8 +90,8 @@ def alert(text, alert_id="default", repeat_after=None, if_in_a_row=None):
     alert_id = str(alert_id)
     fired_alerts_ctx.get().add(alert_id)
 
-    if repeat_after is None:
-        repeat_after = alerts_repeat_after_ctx.get()
+    if renotify is None:
+        renotify = renotify_ctx.get()
 
     if len(text) > MAX_ALERT_MSG_LEN:
         text = text[:MAX_ALERT_MSG_LEN-3] + "..."
@@ -102,13 +102,13 @@ def alert(text, alert_id="default", repeat_after=None, if_in_a_row=None):
     if alert_id not in id_to_alert:
         id_to_alert[alert_id] = Alert(prefix, alert_id, text, start_time=time.time(),
                                       last_update_time=time.time(), last_send_time=0,
-                                      repeat_after=repeat_after, in_a_row=1,
+                                      renotify=renotify, in_a_row=1,
                                       send_if_in_a_row=if_in_a_row,
                                       recovered=False)
     else:
         id_to_alert[alert_id].text = text
         id_to_alert[alert_id].last_update_time = time.time()
-        id_to_alert[alert_id].repeat_after = repeat_after
+        id_to_alert[alert_id].renotify = renotify
         id_to_alert[alert_id].in_a_row += 1
         id_to_alert[alert_id].send_if_in_a_row = if_in_a_row
         id_to_alert[alert_id].recovered = False
@@ -169,7 +169,7 @@ async def send_new_alerts():
                 continue
 
             if (a.recovered or a.last_send_time == 0 or
-                    a.last_send_time + a.repeat_after < cur_time):
+                    a.last_send_time + a.renotify < cur_time):
                 good_alerts.append(a)
 
 
