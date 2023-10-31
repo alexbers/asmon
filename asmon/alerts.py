@@ -211,7 +211,7 @@ async def send_new_alerts():
         if success:
             for alert in alerts_in_send_batch:
                 alert.last_send_time = cur_time
-                if alert.recovered::
+                if alert.recovered:
                     delete_alert(alert)
 
 
