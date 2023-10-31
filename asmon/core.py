@@ -95,6 +95,7 @@ def reg_checker(checker, subj, pause, renotify, max_starts_per_sec, timeout, if_
     filename = file_name_ctx.get()
 
     alert_prefix = (filename, checker.__name__, subj)
+    prefix_to_checks_cnt[alert_prefix] = 0
 
     checkloop = run_checkloop(checker, args, pause, alert_prefix=alert_prefix,
                               renotify=renotify,
@@ -143,12 +144,15 @@ def checker(*, pause, timeout=None, args=[], renotify=float("inf"),
 
 
 def reset_checks_cnt(filename):
-    for prefix, checks_cnt in prefix_to_checks_cnt.items():
-        if prefix[0] == filename:
-            prefix_to_checks_cnt[prefix] = 0
+    global prefix_to_checks_cnt
+    for p in list(prefix_to_checks_cnt):
+        if p[0] == filename:
+            del prefix_to_checks_cnt[p]
 
 
 async def reg_checker_module(filename, full_filename):
+    global prefix_to_checks_cnt
+
     file_name_ctx.set(filename)
     reset_checks_cnt(filename)
     prefix_ctx.set((filename, "__loading__", None))
@@ -157,6 +161,7 @@ async def reg_checker_module(filename, full_filename):
         spec = importlib.util.spec_from_file_location(filename, full_filename)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
+        recover_alerts(filename, unregistered_only=True)
         return module
     except Exception as E:
         traceback.print_exc()

@@ -12,7 +12,7 @@ import httpx
 from config import BOT_TOKEN, TG_DEST_ID, LANGUAGE
 from .commons import (log, prefix_to_id_to_alert, prefix_to_str, prefix_ctx,
                       file_name_ctx, renotify_ctx, if_in_a_row_ctx,
-                      filename_to_tasks, prefix_to_checks_cnt)
+                      prefix_to_checks_cnt)
 from . import metrics
 
 MAX_TG_MSG_LEN = 4096
@@ -52,10 +52,14 @@ def alerts_postcheck_hook():
                 delete_alert(alert)
 
 
-def recover_alerts(filename):
+def recover_alerts(filename, unregistered_only=False):
+    global prefix_to_checks_cnt
+
     filename_to_alerts = make_filename_to_alerts()
     for alert in filename_to_alerts.get(filename, []):
-        alert.recovered = True
+        if alert.prefix not in prefix_to_checks_cnt or not unregistered_only:
+            alert.last_update_time = time.time()
+            alert.recovered = True
 
 
 async def send_msg(user_id, text):
@@ -156,7 +160,7 @@ async def send_new_alerts():
 
         good_alerts = []
         for a in alerts:
-            if not prefix_to_checks_cnt[a.prefix] and a.prefix[1] != "__loading__":
+            if not a.recovered and not prefix_to_checks_cnt[a.prefix] and a.prefix[1] != "__loading__":
                 # there was no checks after reloading
                 continue
 
@@ -207,9 +211,7 @@ async def send_new_alerts():
         if success:
             for alert in alerts_in_send_batch:
                 alert.last_send_time = cur_time
-                filename = alert.prefix[0]
-                task_is_died = not filename_to_tasks[filename]
-                if alert.recovered or task_is_died:
+                if alert.recovered::
                     delete_alert(alert)
 
 
