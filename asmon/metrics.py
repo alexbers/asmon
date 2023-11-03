@@ -61,20 +61,20 @@ def make_metrics_pkt(metrics):
             pkt_body_list.append(f"{name}{{{','.join(tags)}}} {val['val']}")
         else:
             pkt_body_list.append(f"{name} {val}")
-    pkt_body = "\n".join(pkt_body_list) + "\n"
+    pkt_body_bytes = ("\n".join(pkt_body_list) + "\n").encode("utf8")
 
     # pkt_body = "\n".join(map(str,asyncio.all_tasks())) + pkt_body
 
     pkt_header_list = []
     pkt_header_list.append("HTTP/1.1 200 OK")
     pkt_header_list.append("Connection: close")
-    pkt_header_list.append(f"Content-Length: {len(pkt_body)}")
+    pkt_header_list.append(f"Content-Length: {len(pkt_body_bytes)}")
     pkt_header_list.append("Content-Type: text/plain; version=0.0.4; charset=utf-8")
     pkt_header_list.append("Date: " + time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()))
 
-    pkt_header = "\r\n".join(pkt_header_list)
+    pkt_header_bytes = ("\r\n".join(pkt_header_list)).encode("utf8")
 
-    pkt = pkt_header + "\r\n\r\n" + pkt_body
+    pkt = pkt_header_bytes + b"\r\n\r\n" + pkt_body_bytes
     return pkt
 
 
@@ -121,7 +121,7 @@ async def handle_metrics(reader, writer):
 
         pkt = make_metrics_pkt(metrics)
 
-        writer.write(pkt.encode())
+        writer.write(pkt)
         await writer.drain()
 
     except Exception:
