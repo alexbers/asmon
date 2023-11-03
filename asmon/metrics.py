@@ -94,7 +94,7 @@ async def handle_metrics(reader, writer):
         metrics.append(['checks_total', "counter", "number of checks", sum(prefix_to_checks_cnt.values())])
 
         active_alerts = sum(len(vals) for vals in prefix_to_id_to_alert.values())
-        metrics.append(['alerts_total', "counter", "number of alerts", active_alerts])
+        metrics.append(['alerts_total', "counter", "number of active alerts", active_alerts])
 
         for prefix, count in prefix_to_checks_cnt.items():
             metrics.append(["checks", "counter", "checks counter by prefix",
@@ -102,7 +102,7 @@ async def handle_metrics(reader, writer):
 
 
         for prefix, id_to_alert in prefix_to_id_to_alert.items():
-            metrics.append(["alerts", "counter", "alerts counter by prefix",
+            metrics.append(["alerts", "counter", "active alerts counter by prefix",
                            {"prefix": prefix_to_str(prefix), "val": len(id_to_alert)}])
 
 
