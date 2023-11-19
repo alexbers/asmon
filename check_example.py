@@ -55,11 +55,11 @@ async def just_check():
 
 
 
-# @checker(pause=60, alerts_repeat_after=60*60*48, timeout=600)
+# @checker(pause=60, renotify=60*60*48, timeout=600)
 # async def check_rest_api():
 #     """
 #     More complex checks, shows how easy you can write custom checks
-#     alert_repeat_after is a reminder period for alerts
+#     renotify is a reminder period for alerts in seconds
 #     """
 #     try:
 #         async with httpx.AsyncClient() as client:
