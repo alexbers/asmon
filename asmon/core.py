@@ -19,6 +19,7 @@ from .metrics import (metrics_precheck_hook, metrics_postcheck_hook, exceptions_
 
 next_allowed_run = defaultdict(int)
 
+reload_survivers = {}
 
 async def throttle_runs(key, pps):
     global next_allowed_run
@@ -176,6 +177,21 @@ def cancel_task(filename):
     gc.collect()
 
 
+def survive_reloads(name, obj):
+    global reload_survivers
+    k = (file_name_ctx.get(), name)
+    if k not in reload_survivers:
+        reload_survivers[k] = obj
+    return reload_survivers[k]
+
+
+def clean_survivers(filename):
+    global reload_survivers
+    for f, obj in list(reload_survivers):
+        if f == filename and (f, obj) in reload_survivers:
+            del reload_survivers[(f, obj)]
+
+
 async def run(directory="."):
     file_name_ctx.set("asmon.py")
     prefix_ctx.set(("asmon.py", "core", None))
@@ -209,6 +225,7 @@ async def run(directory="."):
                         log("file", filename, "changed, reloading")
 
                     cancel_task(filename)
+
                     filename_to_mod_time.pop(filename, None)
 
                     module = await asyncio.create_task(reg_checker_module(filename, full_filename))
@@ -223,6 +240,7 @@ async def run(directory="."):
                 log("file", filename, "deleted, unloading")
                 cancel_task(filename)
                 recover_alerts(filename)
+                clean_survivers(filename)
                 filename_to_mod_time.pop(filename, None)
             except Exception:
                 log(f"failed to unload {filename}")
