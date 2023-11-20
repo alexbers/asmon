@@ -22,7 +22,7 @@ The script autodetects when the problem is fixed and sends a note about it. Also
 
 When you change some checker, you don't need to restart the service, the runner will **reload it automatically**.
 
-If needed, the Asmon can export its metrics and your custom metrics in Prometheus format so your can **monitor** the Asmon.
+If needed, the Asmon can export its metrics in Prometheus format so your can **monitor** the Asmon. Also you can export custom metrics in checkers.
 
 ## Use Cases ##
 
