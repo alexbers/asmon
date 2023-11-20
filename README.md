@@ -26,7 +26,7 @@ If needed, the Asmon can export its metrics in Prometheus format so your can **m
 
 ## Use Cases ##
 
-- Check if your sites are up and their TLS certificate is not about to expire
+- Check if your sites are up and their TLS certificates are not about to expire
 - Check Telegram bots with Telethon library
 - Monitor hosts behind NAT. If the host is alive it can periodicaly connect to some port opened by checker
 - Remind about your best friends' birthdays :)
@@ -43,9 +43,18 @@ If needed, the Asmon can export its metrics in Prometheus format so your can **m
 
 To test your check script just run it *directly*: `python3 check_example.py`. All alerts will be in console.
 
-## Checker Example ##
+## Checker Examples ##
 
-Example of *check_my_service.py*:
+Example of *check_minimal.py*:
+```python
+from asmon import checker, alert
+
+@checker(pause=10)
+async def just_alert():
+    alert("This is a simple alert")
+```
+
+Example of *check_rest.py*, checks if some REST API works as expected:
 
 ```python
 import json
