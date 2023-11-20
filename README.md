@@ -6,28 +6,27 @@ Also it is a script to run periodicaly run your checkers and send Telegram alert
 
 ![Demo](https://alexbers.com/asmon_en.png)
 
-The library has a simple interface, you need only two things to develop your checkers:
+The library has a simple interface, you need only know two things to develop checkers:
 
-1. The `checker` decorator to mark function to be periodicaly launched
-2. The `alert` function to signal if something is wrong
+1. The `checker` decorator to mark the function to be periodicaly launched
+2. The `alert` function to signal that something is wrong
 
 Unlike other platforms you have unlimited checking posibilities and the performance of asynchronous Python.
-It is hundreds times faster than to launch some program or script on every check. That means that you can monitor
-thousands services from the cheapest VM on some hosting without any CPU or RAM problems.
+It is **hundreds times faster** than to launch some program or script on every check. That means that you can monitor
+thousands services from the **cheapest VM** on some hosting without any CPU or RAM problems.
 
-Alert messages are customizable, so you can include only relevant data in alert messages. The alert messages are
-automatically grouped.
+Alert messages are customizable, so you can include **only relevant data** in alert messages. The alert messages are
+automatically **grouped**.
 
-The script autodetects when the problem is fixed and sends the note about it. Also, it reminds about the problem
-on the specified intervals.
+The script autodetects when the problem is fixed and sends a note about it. Also, it reminds about the problem on specified intervals.
 
-When you change some checker, you don't need to restart the service, the runner will reload it automatically.
+When you change some checker, you don't need to restart the service, the runner will **reload it automatically**.
 
-If needed, the Asmon can export its metrics and your custom metrics in Prometheus format so your can monitor the Asmon.
+If needed, the Asmon can export its metrics and your custom metrics in Prometheus format so your can **monitor** the Asmon.
 
 ## Use Cases ##
 
-- Check if your sites are up and their certificate is not about to expire
+- Check if your sites are up and their TLS certificate is not about to expire
 - Check Telegram bots with Telethon library
 - Monitor hosts behind NAT. If the host is alive it can periodicaly connect to some port opened by checker
 - Remind about your best friends' birthdays :)
@@ -42,7 +41,7 @@ If needed, the Asmon can export its metrics and your custom metrics in Prometheu
 
 ## Dry Run ##
 
-To test your check script just run it *directly*: `python3 check_example.py`. All alerts will written to console.
+To test your check script just run it *directly*: `python3 check_example.py`. All alerts will be in console.
 
 ## Checker Example ##
 
@@ -71,12 +70,12 @@ async def check_rest_api():
 
 The `checker` decorator also can have these arguments:
 
-- **pause**: pause after check in seconds until the next check. This is mandatory arg.
-- **timeout**: timeout of check function. Default: no timeout
-- **renotify**: if alert remain active for a specified time, send a reminder message. Default: no reminders
-- **if_in_a_row**: notify if event occurs some number of times in a row to prevent flapping. Default: 1
-- **max_starts_per_sec**: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
-- **args**: create multiple tasks, one per argument. Default: single task without arguments is created
+- **pause**: pause after check in seconds until the next check. This is *mandatory* arg.
+- **timeout**: timeout of check function. *Default*: no timeout
+- **renotify**: if alert remain active for a specified time, send a reminder message. *Default*: no reminders
+- **if_in_a_row**: notify if event occurs some number of times in a row to prevent flapping. *Default*: 1
+- **max_starts_per_sec**: limits the number of function calls per second. Useful if you have many tasks. *Default*: no limit
+- **args**: create multiple tasks, one per argument. *Default*: single task without arguments is created
 
 Another example, *check_certs.py*, showing `checker` decorator usage with arguments and a built-in
 check for TLS-certificate expiration:
@@ -97,8 +96,6 @@ async def check_certs(host):
         alert(f"port 443 on host {host} is unreachable: {E!r}", if_in_a_row=2)
 
 ```
-
-You can export some values as metrics for Prometheus using a metric function.
 
 For more examples, see `check_example.py`
 
@@ -147,7 +144,7 @@ async def func(arg):
 ```
 
 The metric are called like:
-`asmon_metric{prefix="check_somename.py:funk:12c",name="answer"}`
+`asmon_metric{prefix="check_somename.py:funk:123",name="answer"}`
 
 #### Survive Reload ####
 
@@ -162,4 +159,4 @@ client = survive_reloads("client",
                          api_hash="55555555555555555555555555555555"))
 ```
 
-In this example there will be no any telegram reconnects if the script was modified and reloaded.
+In this example there will be no any Telegram reconnects if the script has been modified and reloaded.
