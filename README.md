@@ -1,16 +1,36 @@
 # Asmon — Asyncronous Monitoring Platform #
 
-Asmon is a Python platform to monitor your services, produce metrics, and send Telegram alerts if something goes wrong.
+Asmon is a Python library to write checkers for your services and produce metrics.
 
-This platform periodicaly runs your checks.
+Also it is a script to run periodicaly run your checkers and send Telegram alerts if something goes wrong.
 
 ![Demo](https://alexbers.com/asmon_en.png)
 
-## Goals ##
+The library has a simple interface, you need only two things to develop your checkers:
 
-1. Customizability, unlimited checking and alerting posibilities
-2. Low CPU and memory consumption even on thousands checks
-3. Small amount of code
+1. The `checker` decorator to mark function to be periodicaly launched
+2. The `alert` function to signal if something is wrong
+
+Unlike other platforms you have unlimited checking posibilities and the performance of asynchronous Python.
+It is hundreds times faster than to launch some program or script on every check. That means that you can monitor
+thousands services from the cheapest VM on some hosting without any CPU or RAM problems.
+
+Alert messages are customizable, so you can include only relevant data in alert messages. The alert messages are
+automatically grouped.
+
+The script autodetects when the problem is fixed and sends the note about it. Also, it reminds about the problem
+on the specified intervals.
+
+When you change some checker, you don't need to restart the service, the runner will reload it automatically.
+
+If needed, the Asmon can export its metrics and your custom metrics in Prometheus format so your can monitor the Asmon.
+
+## Use Cases ##
+
+- Check if your sites are up and their certificate is not about to expire
+- Check Telegram bots with Telethon library
+- Monitor hosts behind NAT. If the host is alive it can periodicaly connect to some port opened by checker
+- Remind about your best friends' birthdays :)
 
 ## Starting Up ##
 
@@ -18,32 +38,13 @@ This platform periodicaly runs your checks.
 2. use *@BotFather* bot to  get your **BOT_TOKEN**, use *@userinfobot* to get your **TG_DEST_ID**
 3. edit *config.py*, set **TG_DEST_ID**, and **BOT_TOKEN**
 3. `docker compose up -d` (or just `python3 asmon.py` if you don't like Docker)
-4. (optional) modify check_example.py with your checks, platform runs it automatically
-5. (optional) add check_\*.py, platform will find and run it automatically too
+4. (optional) modify check_example.py or add some check_\*.py file, the platform will find and run them
 
 ## Dry Run ##
 
-To test your check script just run it *directly*: `python3 check_example.py`.
+To test your check script just run it *directly*: `python3 check_example.py`. All alerts will written to console.
 
-## Performance ##
-
-In other monitoring platforms, running custom checks involves running an external program, which is
-**expensive** in terms of CPU and RAM.
-
-Asmon allows developers to create custom checks in Python using *asyncronous* functions. Each check consumes approximately 10KB of memory, so you can run **100 000 simultanious checks per gigabyte of RAM**.
-
-The check speed depends on the check function complexity. For example, when checking SSL certificate
-expiration, you can expect a speed of about **1 000 checks/sec** on the cheapest VM available
-on Digital Ocean hosting.
-
-
-## How to Develop Checkers  ##
-
-The platfom has a simple API, that requires knowledge of two things:
-
-1. The `checker` decorator to mark your function to be periodicaly launched
-2. The `alert` function to signal if something is wrong
-
+## Checker Example ##
 
 Example of *check_my_service.py*:
 
@@ -70,11 +71,11 @@ async def check_rest_api():
 
 The `checker` decorator also can have these arguments:
 
-- **pause**: pause after check in seconds until the next check. Default: see config.py
+- **pause**: pause after check in seconds until the next check. This is mandatory arg.
 - **timeout**: timeout of check function. Default: no timeout
 - **renotify**: if alert remain active for a specified time, send a reminder message. Default: no reminders
-- **max_starts_per_sec**: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
 - **if_in_a_row**: notify if event occurs some number of times in a row to prevent flapping. Default: 1
+- **max_starts_per_sec**: limits the number of function calls per second. Useful if you have many tasks. Default: no limit
 - **args**: create multiple tasks, one per argument. Default: single task without arguments is created
 
 Another example, *check_certs.py*, showing `checker` decorator usage with arguments and a built-in
@@ -97,11 +98,6 @@ async def check_certs(host):
 
 ```
 
-The platform sends messages about recoveries and reminds you about unrecovered alerts at intervals.
-
-Scripts should be named `check_*.py`. If you modify a script, the platform will do its magic and
-automaticaly reload it.
-
 You can export some values as metrics for Prometheus using a metric function.
 
 For more examples, see `check_example.py`
@@ -109,6 +105,7 @@ For more examples, see `check_example.py`
 
 ### Advanced usage ###
 
+#### Alert Ids ####
 If you want to distinguish between different error conditions and have different alerts for them, use the second parameter of alert function - the **alert\_id**.
 
 Example:
@@ -135,3 +132,34 @@ async def f():
 ```
 
 In this case, if there will be "site is down" alert, you will not get spam messages about recoveries of other two alerts, if they were fired before.
+
+#### Export Mertics ####
+
+Use the `metric` function:
+
+Example:
+```python
+from asmon import checker, metric
+
+@checker(args=[123, 456], pause=10)
+async def func(arg):
+   metric("answer", arg)
+```
+
+The metric are called like:
+`asmon_metric{prefix="check_somename.py:funk:12c",name="answer"}`
+
+#### Survive Reload ####
+
+When you want some variable to surive script reload use a `survive_reloads` function:
+
+```python
+from telethon import TelegramClient
+from asmon import survive_reloads
+
+client = survive_reloads("client",
+                         TelegramClient('9222222222', api_id=111111,
+                         api_hash="55555555555555555555555555555555"))
+```
+
+In this example there will be no any telegram reconnects if the script was modified and reloaded.
