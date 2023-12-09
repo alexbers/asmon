@@ -112,11 +112,11 @@ def format_seconds(sec, lang="EN"):
     if sec < 120:
         return f"{sec} сек." if lang == "RU" else f"{sec} sec."
     elif sec < 120*60:
-        return f"{sec//60} мин." if lang == "RU" else f"{sec} min."
+        return f"{sec//60} мин." if lang == "RU" else f"{sec//60} min."
     elif sec < 48*60*60:
-        return f"{sec//60//60} ч." if lang == "RU" else f"{sec} hours."
+        return f"{sec//60//60} ч." if lang == "RU" else f"{sec//60//60} hours."
     else:
-        return f"{sec//60//60//24} дн." if lang == "RU" else f"{sec} days."
+        return f"{sec//60//60//24} дн." if lang == "RU" else f"{sec//60//60//24} days."
 
 
 def format_alert(alert, lang="EN", max_len=MAX_ALERT_MSG_LEN):
