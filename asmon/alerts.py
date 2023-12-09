@@ -22,7 +22,9 @@ fired_alerts_ctx = contextvars.ContextVar("fired_alerts", default=set())
 
 @dataclass
 class Alert:
-    prefix: tuple
+    filename: str
+    funcname: str
+    funcarg: object
     alert_id: str
     text: str
     start_time: float
@@ -32,6 +34,10 @@ class Alert:
     in_a_row: int
     notify_if_in_a_row: int
     recovered: bool
+
+    @property
+    def prefix(self):
+        return (self.filename, self.funcname, self.funcarg)
 
 
 def alerts_precheck_hook(args_str):
@@ -55,8 +61,11 @@ def alerts_postcheck_hook():
 def recover_alerts(filename, unregistered_only=False):
     global prefix_to_checks_cnt
 
-    filename_to_alerts = make_filename_to_alerts()
-    for alert in filename_to_alerts.get(filename, []):
+    for id_to_alert in prefix_to_id_to_alert.values():
+        for alert in id_to_alert.values():
+            if alert.filename != filename:
+                continue
+
         if alert.prefix not in prefix_to_checks_cnt or not unregistered_only:
             alert.last_update_time = time.time()
             alert.recovered = True
@@ -102,9 +111,12 @@ def alert(text, alert_id="default", renotify=None, if_in_a_row=None):
 
     prefix = prefix_ctx.get()
     id_to_alert = prefix_to_id_to_alert[prefix]
+    filename, funcname, funcarg = prefix
 
     if alert_id not in id_to_alert:
-        id_to_alert[alert_id] = Alert(prefix, alert_id, text, start_time=time.time(),
+        id_to_alert[alert_id] = Alert(alert_id, text, filename=filename,
+                                      funcname=funcname, funcarg=funcarg,
+                                      start_time=time.time(),
                                       last_update_time=time.time(), last_send_time=0,
                                       renotify=renotify, in_a_row=1,
                                       notify_if_in_a_row=if_in_a_row,
@@ -130,19 +142,6 @@ def format_seconds(sec, lang="EN"):
         return f"{sec//60//60//24} дн." if lang == "RU" else f"{sec} days."
 
 
-def make_filename_to_alerts():
-    filename_to_alerts = {}
-    for prefix, id_to_alert in prefix_to_id_to_alert.items():
-        filename = prefix[0]
-
-        if filename not in filename_to_alerts:
-            filename_to_alerts[filename] = []
-
-        for alert_id, alert in id_to_alert.items():
-            filename_to_alerts[filename].append(alert)
-    return filename_to_alerts
-
-
 def delete_alert(alert):
     if alert.alert_id in prefix_to_id_to_alert[alert.prefix]:
         del prefix_to_id_to_alert[alert.prefix][alert.alert_id]
@@ -151,7 +150,16 @@ def delete_alert(alert):
 
 
 async def send_new_alerts():
-    filename_to_alerts = make_filename_to_alerts()
+    filename_to_alerts = {}
+
+    for id_to_alert in prefix_to_id_to_alert.values():
+        for alert in id_to_alert.values():
+            if alert.filename not in filename_to_alerts:
+                filename_to_alerts[alert.filename] = []
+
+            for alert_id, alert in id_to_alert.items():
+                filename_to_alerts[alert.filename].append(alert)
+
     for filename, alerts in filename_to_alerts.items():
         msg = ""
         alerts_in_send_batch = []
@@ -249,7 +257,7 @@ async def alert_save_loop():
     while True:
         try:
             with open("alerts.json.tmp", "w") as file:
-                for prefix, id_to_alert in prefix_to_id_to_alert.items():
+                for id_to_alert in prefix_to_id_to_alert.values():
                     for alert in id_to_alert.values():
                         file.write(json.dumps(asdict(alert), ensure_ascii=False) + "\n")
 
@@ -267,11 +275,9 @@ def load_alerts():
         with open("alerts.json") as file:
             for line in file:
                 try:
-                    alert = json.loads(line)
-                    alert["prefix"] = tuple(alert["prefix"])
-                    prefix = alert["prefix"]
-                    alert_id = alert["alert_id"]
-                    prefix_to_id_to_alert[prefix][alert_id] = Alert(**alert)
+                    alert_dict = json.loads(line)
+                    alert = Alert(**alert_dict)
+                    prefix_to_id_to_alert[alert.prefix][alert.alert_id] = alert
                     loaded +=1
                 except Exception as E:
                     log(f"bad line in alerts.json, {E}: {line}")
