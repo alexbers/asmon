@@ -147,7 +147,7 @@ async def send_new_alerts():
             if alert.last_send_time >= send_start_time:
                 sucessful_cnt += 1
 
-        if not sucessful_cnt:
+        if sendable_alerts and not sucessful_cnt:
             metrics.tg_fails += 1
 
         metrics.send_alert_queue_size = len(sendable_alerts) - sucessful_cnt
