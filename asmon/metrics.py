@@ -10,6 +10,7 @@ from .commons import (log, prefix_to_str, prefix_to_id_to_alert, filename_to_tas
 
 # metrics
 tg_fails = 0
+send_alert_queue_size = 0
 exceptions_cnt = Counter({"core": 0, "alert_sender": 0})
 
 # prefix => {description) => value
@@ -90,7 +91,8 @@ async def handle_metrics(reader, writer):
         metrics = []
         metrics.append(["uptime", "counter", "asmon uptime", time.time() - START_TIME])
         metrics.append(["tg_fails", "counter", "tg send fails", tg_fails])
-        metrics.append(["tasks", "counter", "number of tasks", len(asyncio.all_tasks())])
+        metrics.append(["send_alert_queue_size", "gauge", "alert send queue", send_alert_queue_size])
+        metrics.append(["tasks", "gauge", "number of tasks", len(asyncio.all_tasks())])
         metrics.append(['checks_total', "counter", "number of checks", sum(prefix_to_checks_cnt.values())])
 
         active_alerts = sum(len(vals) for vals in prefix_to_id_to_alert.values())

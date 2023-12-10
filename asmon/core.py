@@ -13,7 +13,8 @@ from .commons import (log, prefix_to_str, prefix_ctx, file_name_ctx,
                       renotify_ctx, if_in_a_row_ctx, filename_to_tasks,
                       prefix_to_checks_cnt)
 from .alerts import (alert, alerts_precheck_hook, alerts_postcheck_hook, load_alerts,
-                     alert_sender_loop, alert_stats_loop, alert_save_loop, recover_alerts)
+                     alert_sender_loop, alert_stats_loop, alert_save_loop, recover_alerts,
+                     try_reload_send_alerts, send_alert_reloader_loop)
 from .metrics import (metrics_precheck_hook, metrics_postcheck_hook, exceptions_cnt,
                       start_metrics_srv)
 
@@ -198,7 +199,15 @@ async def run(directory="."):
     
     load_alerts()
 
+    try:
+        try_reload_send_alerts(directory)
+    except Exception:
+        log("Failed to load send_alerts function from send_alerts.py, exiting")
+        traceback.print_exc()
+        exit(1)
+
     alert_sender = asyncio.create_task(alert_sender_loop())
+    alert_reloader = asyncio.create_task(send_alert_reloader_loop(directory))
     stat_printer = asyncio.create_task(alert_stats_loop())
     alert_saver = asyncio.create_task(alert_save_loop())
     metrics_handler = asyncio.create_task(start_metrics_srv())

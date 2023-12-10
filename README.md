@@ -169,3 +169,11 @@ client = survive_reloads("client",
 ```
 
 In this example there will be no any Telegram reconnects if the script has been modified and reloaded.
+
+#### Customizing Notifications ####
+
+By default alert messages are grouped and send to some Telegram account or group.
+
+It is possible to customize it, for example to change how messages look, how they grouped method, to whom they delivered and so on. It is even possible to use other platform instead of Telegram.
+
+To customize notifications you should modify *send\_alerts.py* script. It will be reloaded automaticaly, no need to restart the service. This script should contain `send_alerts` async function which takes the array of alerts as argument, send at least one alert from it. The sent alerts should be marked by updating their last_send_time attribute to current_time.

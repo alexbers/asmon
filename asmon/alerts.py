@@ -5,20 +5,22 @@ import traceback
 import sys
 import os
 import json
+import importlib
+import gc
 from dataclasses import dataclass, asdict
 
-import httpx
-
-from config import BOT_TOKEN, TG_DEST_ID, LANGUAGE
 from .commons import (log, prefix_to_id_to_alert, prefix_to_str, prefix_ctx,
                       file_name_ctx, renotify_ctx, if_in_a_row_ctx,
                       prefix_to_checks_cnt)
 from . import metrics
 
-MAX_TG_MSG_LEN = 4096
-MAX_ALERT_MSG_LEN = 1024
+
+SEND_ALERTS_FILENAME = "send_alerts.py"
 
 fired_alerts_ctx = contextvars.ContextVar("fired_alerts", default=set())
+
+send_alerts = None  # dynamicaly loaded
+send_alerts_mod_time = 0
 
 @dataclass
 class Alert:
@@ -107,71 +109,6 @@ def alert(text, alert_id="default", renotify=None, if_in_a_row=None):
         id_to_alert[alert_id].recovered = False
 
 
-def format_seconds(sec, lang="EN"):
-    sec = int(sec)
-    if sec < 120:
-        return f"{sec} сек." if lang == "RU" else f"{sec} sec."
-    elif sec < 120*60:
-        return f"{sec//60} мин." if lang == "RU" else f"{sec//60} min."
-    elif sec < 48*60*60:
-        return f"{sec//60//60} ч." if lang == "RU" else f"{sec//60//60} hours."
-    else:
-        return f"{sec//60//60//24} дн." if lang == "RU" else f"{sec//60//60//24} days."
-
-
-def format_alert(alert, lang="EN", max_len=MAX_ALERT_MSG_LEN):
-    text = ""
-    if alert.recovered:
-        broken_time = format_seconds(time.time() - alert.start_time, lang=lang)
-        if lang == "RU":
-            text = f"🎉 починилось, было сломано {broken_time}: {alert.text}"
-        else:
-            text = f"🎉 fixed, was broken {broken_time}: {alert.text}"
-    elif alert.last_send_time == 0:
-        if lang == "RU":
-            text = f"🔥 сломалось: {alert.text}"
-        else:
-            text = f"🔥 broken: {alert.text}"
-    else:
-        broken_time = format_seconds(time.time() - alert.start_time, lang=lang)
-        if lang == "RU":
-            text = f"⏱ сломано уже {broken_time}: {alert.text}"
-        else:
-            text = f"⏱ broken for {broken_time}: {alert.text}"
-
-    if len(text) > max_len:
-        text = text[:max_len][:-3] + "..."
-
-    return text
-
-
-def delete_alert(alert):
-    if alert.alert_id in prefix_to_id_to_alert[alert.prefix]:
-        del prefix_to_id_to_alert[alert.prefix][alert.alert_id]
-        if not prefix_to_id_to_alert[alert.prefix]:
-            del prefix_to_id_to_alert[alert.prefix]
-
-
-async def send_msg(user_id, text):
-    log("send_msg", user_id, text)
-
-    url = "https://api.telegram.org/bot%s/sendMessage" % BOT_TOKEN
-    payload = {"chat_id": user_id, "text": text,}
-
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = httpx.post(url, json=payload)
-            if resp.status_code != 200:
-                log(f"Failed to send msg to {user_id}: {text} " +
-                    f"{resp.status_code} {resp.text}")
-                metrics.tg_fails += 1
-            return resp.status_code == 200
-    except OSError:
-        traceback.print_exc()
-        metrics.exceptions_cnt["alert_sender"] += 1
-        return False
-
-
 def get_sendable_alerts():
     sendable_alerts = []
 
@@ -198,40 +135,6 @@ def get_sendable_alerts():
     return sendable_alerts
 
 
-def get_alert_group(alert):
-    return alert.filename
-
-
-async def send_alerts(alerts):
-    group_to_alerts = {}
-    for alert in alerts:
-        group = get_alert_group(alert)
-        if group not in group_to_alerts:
-            group_to_alerts[group] = []
-        group_to_alerts[group].append(alert)
-
-    for group, alerts in group_to_alerts.items():
-        msg = ""
-        alerts_to_send = []
-
-        for alert in alerts:
-            msg_part = format_alert(alert, lang=LANGUAGE)
-
-            if len(msg) + len(msg_part) + 1 >= MAX_TG_MSG_LEN:
-                break
-
-            msg += msg_part + "\n"
-            alerts_to_send.append(alert)
-
-        if not msg:
-            continue
-
-        success = await send_msg(TG_DEST_ID, msg)
-        if success:
-            for alert in alerts_to_send:
-                alert.last_send_time = time.time()
-
-
 async def send_new_alerts():
     sendable_alerts = get_sendable_alerts()
     send_start_time = time.time()
@@ -239,11 +142,51 @@ async def send_new_alerts():
     try:
         await send_alerts(sendable_alerts)
     finally:
+        sucessful_cnt = 0
+        for alert in sendable_alerts:
+            if alert.last_send_time >= send_start_time:
+                sucessful_cnt += 1
+
+        if not sucessful_cnt:
+            metrics.tg_fails += 1
+
+        metrics.send_alert_queue_size = len(sendable_alerts) - sucessful_cnt
+
         # clean recovered alerts
         for alert in sendable_alerts:
             if alert.recovered and alert.last_send_time >= send_start_time:
                 delete_alert(alert)
 
+
+def delete_alert(alert):
+    if alert.alert_id in prefix_to_id_to_alert[alert.prefix]:
+        del prefix_to_id_to_alert[alert.prefix][alert.alert_id]
+        if not prefix_to_id_to_alert[alert.prefix]:
+            del prefix_to_id_to_alert[alert.prefix]
+
+
+def try_reload_send_alerts(directory):
+    global send_alerts_mod_time
+    global send_alerts
+
+    full_filename = os.path.join(directory, SEND_ALERTS_FILENAME)
+
+    mod_time = os.path.getmtime(full_filename)
+    if mod_time == send_alerts_mod_time and send_alerts:
+        return
+
+    if not send_alerts:
+        log("file", SEND_ALERTS_FILENAME, "found, loading")
+    else:
+        log("file", SEND_ALERTS_FILENAME, "changed, reloading")
+
+    spec = importlib.util.spec_from_file_location(SEND_ALERTS_FILENAME, full_filename)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    send_alerts = module.send_alerts
+    send_alerts_mod_time = mod_time
+    gc.collect()
 
 
 async def alert_sender_loop():
@@ -256,6 +199,19 @@ async def alert_sender_loop():
             metrics.exceptions_cnt["alert_sender"] += 1
         finally:
             await asyncio.sleep(ALERT_PAUSE)
+
+
+async def send_alert_reloader_loop(directory):
+    global send_alerts
+
+    RELOAD_PAUSE = 10
+    while True:
+        try:
+            try_reload_send_alerts(directory)
+        except Exception:
+            traceback.print_exc()
+        finally:
+            await asyncio.sleep(RELOAD_PAUSE)
 
 
 async def alert_stats_loop():
