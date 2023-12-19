@@ -176,11 +176,11 @@ When you want some variable to surive script reloads use a `SurviveReloadsVar` w
 from telethon import TelegramClient
 from asmon import SurviveReloadsVar
 
-client = SurviveReloadsVar("client",
-                           TelegramClient('9222222222', api_id=111111,
-                           api_hash="55555555555555555555555555555555"))
-print(client.get())
-client.set(None)
+client_var = SurviveReloadsVar("client",
+                               TelegramClient('9222222222', api_id=111111,
+                               api_hash="55555555555555555555555555555555"))
+client = client_var.get()
+client_var.set(1234)
 ```
 
 In this example there will be no any Telegram reconnects if the script has been modified and reloaded.
