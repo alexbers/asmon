@@ -170,15 +170,17 @@ The metric are called like:
 
 #### Survive Reload ####
 
-When you want some variable to surive script reload use a `survive_reloads` function:
+When you want some variable to surive script reloads use a `SurviveReloadsVar` wrapper. It has `get` and `set` methods:
 
 ```python
 from telethon import TelegramClient
-from asmon import survive_reloads
+from asmon import SurviveReloadsVar
 
-client = survive_reloads("client",
-                         TelegramClient('9222222222', api_id=111111,
-                         api_hash="55555555555555555555555555555555"))
+client = SurviveReloadsVar("client",
+                           TelegramClient('9222222222', api_id=111111,
+                           api_hash="55555555555555555555555555555555"))
+print(client.get())
+client.set(None)
 ```
 
 In this example there will be no any Telegram reconnects if the script has been modified and reloaded.

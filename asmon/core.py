@@ -177,14 +177,22 @@ def cancel_task(filename):
     filename_to_tasks.pop(filename, None)
     gc.collect()
 
+class SurviveReloadsVar:
+    def __init__(self, name, obj):
+        global reload_survivers
+        self.k = (file_name_ctx.get(), name)
 
-def survive_reloads(name, obj):
-    global reload_survivers
-    k = (file_name_ctx.get(), name)
-    if k not in reload_survivers:
-        reload_survivers[k] = obj
-    return reload_survivers[k]
+        if self.k not in reload_survivers:
+            reload_survivers[self.k] = obj
 
+    def get(self):
+        global reload_survivers
+        return reload_survivers.get(self.k)
+
+
+    def set(self, obj):
+        global reload_survivers
+        reload_survivers[self.k] = obj
 
 def clean_survivers(filename):
     global reload_survivers
