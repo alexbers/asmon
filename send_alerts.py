@@ -94,10 +94,17 @@ def format_alert(alert, lang, max_len=MAX_ALERT_MSG_LEN):
         else:
             text = f"🎉 починилось, было сломано {broken_time}: {alert.text}"
     elif alert.last_send_time == 0:
-        if lang != "RU":
-            text = f"🔥 broken: {alert.text}"
+        if alert.is_event:
+            if lang != "RU":
+                text = f"⚠️ event: {alert.text}"
+            else:
+                text = f"⚠️ событие: {alert.text}"
+
         else:
-            text = f"🔥 сломалось: {alert.text}"
+            if lang != "RU":
+                text = f"🔥 broken: {alert.text}"
+            else:
+                text = f"🔥 сломалось: {alert.text}"
     else:
         broken_time = format_seconds(time.time() - alert.start_time, lang=lang)
         if lang != "RU":

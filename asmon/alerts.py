@@ -31,11 +31,12 @@ class Alert:
     text: str
     start_time: float
     last_update_time: float
-    last_send_time: float
-    renotify: float
-    in_a_row: int
-    notify_if_in_a_row: int
-    recovered: bool
+    last_send_time: float = 0
+    renotify: float = float("inf")
+    in_a_row: int = 0
+    notify_if_in_a_row: int = 1
+    is_event: bool = False
+    recovered: bool = False
 
     @property
     def prefix(self):
@@ -52,6 +53,9 @@ def alerts_postcheck_hook():
     # if alert not fired during the check, recover it
     for alert in active:
         if alert.alert_id not in fired_alerts_ctx.get():
+            if alert.is_event:
+                continue
+
             alert.last_update_time = time.time()
             alert.recovered = True
 
@@ -68,12 +72,15 @@ def recover_alerts(filename, unregistered_only=False):
             if alert.filename != filename:
                 continue
 
+            if alert.is_event:
+                continue
+
             if alert.prefix not in prefix_to_checks_cnt or not unregistered_only:
                 alert.last_update_time = time.time()
                 alert.recovered = True
 
 
-def alert(text, alert_id="default", renotify=None, if_in_a_row=None):
+def alert(text, alert_id="default", renotify=None, if_in_a_row=None, event=False):
     if not file_name_ctx.get():
         # if script runs directly, do nothing
         log(text)
@@ -92,13 +99,18 @@ def alert(text, alert_id="default", renotify=None, if_in_a_row=None):
     id_to_alert = prefix_to_id_to_alert[prefix]
     filename, funcname, funcarg = prefix
 
+    if event:
+        renotify = False
+        if_in_a_row = 1
+        alert_id = f"__event{len(id_to_alert)}__"
+
     if alert_id not in id_to_alert:
         id_to_alert[alert_id] = Alert(alert_id=alert_id, text=text, filename=filename,
                                       funcname=funcname, funcarg=funcarg,
                                       start_time=time.time(),
                                       last_update_time=time.time(), last_send_time=0,
                                       renotify=renotify, in_a_row=1,
-                                      notify_if_in_a_row=if_in_a_row,
+                                      notify_if_in_a_row=if_in_a_row, is_event=event,
                                       recovered=False)
     else:
         id_to_alert[alert_id].text = text
@@ -152,9 +164,11 @@ async def send_new_alerts():
 
         metrics.send_alert_queue_size = len(sendable_alerts) - sucessful_cnt
 
-        # clean recovered alerts
+        # clean recovered and event alerts
         for alert in sendable_alerts:
-            if alert.recovered and alert.last_send_time >= send_start_time:
+            was_sent = (alert.last_send_time >= send_start_time)
+            ready_to_del = (alert.recovered or alert.is_event)
+            if was_sent and ready_to_del:
                 delete_alert(alert)
 
 

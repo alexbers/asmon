@@ -139,6 +139,19 @@ async def f():
 
 In this case, if there will be "site is down" alert, you will not get spam messages about recoveries of other two alerts, if they were fired before.
 
+#### Events ####
+Some problems can not be expressed in terms broken/fixed, instead they can be expressed as events. For example if some user logged in or some monitored page were changed. In these cases pass `event=True` keyword argument to *alert*
+call.
+
+```python
+@checker(pause=10)
+async def f():
+   alert("AAAA", event=True)
+   alert("BBBB", event=True)
+```
+
+The system will notify once about every alert. It is up to you to ensure the events not repeat every time the function runs, for example if you parse logs, you need a global variable to track already handled lines.
+
 #### Export Mertics ####
 
 Use the `metric` function:
