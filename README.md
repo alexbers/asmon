@@ -152,7 +152,26 @@ async def f():
 
 The system will notify once about every alert. It is up to you to ensure the events not created every time the function runs. For example if you parse logs, you need a global variable to track already handled lines.
 
-#### Export Mertics ####
+#### Metrics ####
+
+Asmon exports its metrics in the Prometheus format on port specified in **METRICS_PORT** constant in config.py. By default access is restricted from all addresses, to add some modify ***IP_WHITELIST*** constant in config.py
+
+Built in metrics:
+- **asmon_uptime**: uptime of asmon in seconds
+- **asmon_tg_fails**: number of times when no message was sent from send queue, if it growns, alerts are not defivered
+- **asmon_send_alert_queue_size**: number of alerts in send queue. If it is not zero, something is likely wrong
+- **asmon_tasks**: number of asyncio tasks. If it growns, it is strange
+- **asmon_active_tasks**: number of check tasks grouped by file with checkers
+- **asmon_checks_total**: number of finished checks, should grown linearly
+- **asmon_checks**: number of finished checks per check checker function, should grown linearly
+- **asmon_alerts_total**: number of active alerts, usually zero
+- **asmon_alerts**: number of active alerts per check checker function, usually zero
+- **asmon_exceptions**: exceptions count in asmon core, should be zero
+- **asmon_metrics**: user metrics, see bellow
+
+It is good idea to deliver messages about alert delivery problems using some reserve channel like SMS or email.
+
+#### Export Custom Mertics ####
 
 Use the `metric` function:
 
